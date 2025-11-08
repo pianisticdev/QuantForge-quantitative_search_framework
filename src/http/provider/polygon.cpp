@@ -3,23 +3,28 @@
 //
 
 #include "polygon.hpp"
+
 #include <simdjson.h>
+
 #include <string>
+
 #include "../api/stock_api.hpp"
+#include "../error/http_error.hpp"
 #include "../model/model.hpp"
 using namespace simdjson;
 
 namespace http::provider {
-    PolygonProvider::PolygonProvider(std::string api_key)
-            : base_url_("https://api.polygon.io"), api_key_(std::move(api_key)) {}
+    struct PolygonOptions {
+        static constexpr const char* BASE_URL = "https://api.polygon.io";
+    };
+
+    PolygonProvider::PolygonProvider(std::string api_key) : base_url_(PolygonOptions::BASE_URL), api_key_(std::move(api_key)) {}
 
     http::model::Request PolygonProvider::build_custom_aggregate_bars(const http::stock_api::AggregateBarsArgs& a) const {
         http::model::Request r;
-        r.url = base_url_ + "/v2/aggs/ticker/" + a.symbol + "/range/" +
-                std::to_string(a.timespan) + "/" + a.timespan_unit + "/" +
-                a.from + "/" + a.to;
-        r.headers = {"Authorization: Bearer " + api_key_, "Accept: application/json"};
-        r.method = "GET";
+        r.url_ = base_url_ + "/v2/aggs/ticker/" + a.symbol_ + "/range/" + std::to_string(a.timespan_) + "/" + a.timespan_unit_ + "/" + a.from_ + "/" + a.to_;
+        r.headers_ = {"Authorization: Bearer " + api_key_, "Accept: application/json"};
+        r.method_ = "GET";
         return r;
     }
 
@@ -28,42 +33,38 @@ namespace http::provider {
 
         try {
             ondemand::parser parser;
-            padded_string json(resp.body);
+            padded_string json(resp.body_);
             ondemand::document doc = parser.iterate(json);
 
-            out.ticker = std::string(doc["ticker"]);
-            out.adjusted = bool(doc["adjusted"]);
-            out.query_count = int64_t(doc["queryCount"]);
-            out.result_count = int64_t(doc["resultsCount"]);
+            out.ticker_ = std::string(doc["ticker"]);
+            out.adjusted_ = bool(doc["adjusted"]);
+            out.query_count_ = int64_t(doc["queryCount"]);
+            out.result_count_ = int64_t(doc["resultsCount"]);
 
             for (auto result : doc["results"]) {
                 http::stock_api::AggregateBarResult bar{};
-                bar.volume = double(result["v"]);
-                bar.volume_weighted_price = double(result["vw"]);
-                bar.open = double(result["o"]);
-                bar.close = double(result["c"]);
-                bar.high = double(result["h"]);
-                bar.low = double(result["l"]);
-                bar.unix_ts_ms = int64_t(result["t"]);
-                bar.tx_count = int64_t(result["n"]);
+                bar.volume_ = double(result["v"]);
+                bar.volume_weighted_price_ = double(result["vw"]);
+                bar.open_ = double(result["o"]);
+                bar.close_ = double(result["c"]);
+                bar.high_ = double(result["h"]);
+                bar.low_ = double(result["l"]);
+                bar.unix_ts_ms_ = (long long)(result["t"]);
+                bar.tx_count_ = int(result["n"]);
 
                 if (result["otc"].error() == simdjson::SUCCESS) {
-                    bar.is_otc = bool(result["otc"]);
+                    bar.is_otc_ = bool(result["otc"]);
                 } else {
-                    bar.is_otc = false;
+                    bar.is_otc_ = false;
                 }
 
-                out.results.push_back(std::move(bar));
+                out.results_.emplace_back(bar);
             }
         } catch (const simdjson::simdjson_error& e) {
-            throw http::http_error::HttpError(
-                    resp.status,
-                    resp.effective_url,
-                    resp.body.substr(0, 512),
-                    "Failed to parse JSON response: " + std::string(e.what())
-            );
+            throw http::http_error::HttpError(resp.status_, resp.effective_url_, resp.body_.substr(0, http::http_error::ERROR_MESSAGE_LENGTH),
+                                              "Failed to parse JSON response: " + std::string(e.what()));
         }
 
         return out;
     }
-}
+}  // namespace http::provider

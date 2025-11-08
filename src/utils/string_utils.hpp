@@ -2,11 +2,11 @@
 // Created by Daniel Griffiths on 11/1/25.
 //
 
-#ifndef MONTE_CARLO_AND_BACKTESTER_UTILS_HPP
-#define MONTE_CARLO_AND_BACKTESTER_UTILS_HPP
+#ifndef QUANT_FORGE_UTILS_HPP
+#define QUANT_FORGE_UTILS_HPP
 
-#include <string>
 #include <filesystem>
+#include <string>
 #include <vector>
 
 namespace string_utils {
@@ -16,9 +16,9 @@ namespace string_utils {
 
     std::string trim(std::string s);
 
-    std::filesystem::path append_to_path(const std::filesystem::path& path, std::string str);
+    std::filesystem::path append_to_path(const std::filesystem::path& path, const std::string& str);
 
     std::vector<std::string> split_comma_delimited_string(std::string_view sv);
-}
+}  // namespace string_utils
 
-#endif //MONTE_CARLO_AND_BACKTESTER_UTILS_HPP
+#endif

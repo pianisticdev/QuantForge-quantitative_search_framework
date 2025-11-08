@@ -2,19 +2,21 @@
 // Created by Daniel Griffiths on 11/1/25.
 //
 
-#ifndef MONTE_CARLO_AND_BACKTESTER_HTTP_ERROR_HPP
-#define MONTE_CARLO_AND_BACKTESTER_HTTP_ERROR_HPP
+#ifndef QUANT_FORGE_HTTP_ERROR_HPP
+#define QUANT_FORGE_HTTP_ERROR_HPP
 
 #include <stdexcept>
 #include <string>
 
 namespace http::http_error {
-    struct HttpError : public std::runtime_error {
-        long status;
-        std::string url;
-        std::string body_preview;
-        explicit HttpError(long s, std::string u, std::string preview, std::string msg);
-    };
-}
+    const long ERROR_MESSAGE_LENGTH = 512;
 
-#endif //MONTE_CARLO_AND_BACKTESTER_HTTP_ERROR_HPP
+    struct HttpError : public std::runtime_error {
+        long status_;
+        std::string url_;
+        std::string body_preview_;
+        explicit HttpError(long s, std::string u, std::string preview, const std::string &msg);
+    };
+}  // namespace http::http_error
+
+#endif

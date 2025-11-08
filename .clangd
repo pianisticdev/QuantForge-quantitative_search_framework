@@ -1,0 +1,42 @@
+CompileFlags:
+  CompilationDatabase: build/
+  Add:
+    - -std=c++20
+    - -Wall
+    - -Wextra
+  Remove:
+    - -W*
+
+Diagnostics:
+  ClangTidy:
+    Add: [
+      performance-*,
+      modernize-*,
+      readability-*,
+      bugprone-*,
+      cppcoreguidelines-*
+    ]
+    Remove: [
+      modernize-use-trailing-return-type,
+      readability-identifier-length,
+      cppcoreguidelines-pro-bounds-pointer-arithmetic,
+      cppcoreguidelines-pro-type-vararg
+    ]
+    CheckOptions:
+      readability-identifier-naming.ClassCase: CamelCase
+      readability-identifier-naming.FunctionCase: lower_case
+      readability-identifier-naming.VariableCase: lower_case
+      readability-identifier-naming.ConstantCase: UPPER_CASE
+      readability-identifier-naming.LocalConstantCase: lower_case
+      readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+      readability-identifier-naming.MemberSuffix: '_'
+      cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: 'true'
+  UnusedIncludes: Strict
+
+Index:
+  Background: Build
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: No
+  DeducedTypes: Yes

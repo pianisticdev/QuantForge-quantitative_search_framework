@@ -1,38 +1,35 @@
-#include "src/http/model/model.hpp"
+#include <iostream>
+
+#include "src/http/api/stock_api.hpp"
 #include "src/http/cache/network_cache.hpp"
 #include "src/http/client/curl_easy.hpp"
 #include "src/http/client/curl_global.hpp"
+#include "src/http/error/http_error.hpp"
 #include "src/http/provider/polygon.hpp"
-#include "src/http/api/stock_api.hpp"
-#include <iostream>
+#include "src/utils/constants.hpp"
 
 int main() {
     try {
         //
         // Collect
         //
-        std::string api_key = "REDACTED";
 
-        http::cache::NetworkCachePolicy cache_policy{
-                .enable_caching = true,
-                .ttl_s = 60*60*24
-        };
+        const char* api_key = std::getenv("POLYGON_API_KEY");
+        if (api_key == nullptr) {
+            std::cout << "POLYGON_API_KEY not set" << std::endl;
+            return 1;
+        }
 
-        http::stock_api::AggregateBarsArgs args{
-                .symbol = "AAPL",
-                .from = "2023-01-01",
-                .to = "2025-10-01",
-                .timespan = 1,
-                .timespan_unit = "hour"
-        };
+        auto cache_policy =
+            std::make_unique<http::cache::NetworkCachePolicy>(http::cache::NetworkCachePolicy{.enable_caching_ = true, .ttl_s_ = constants::ONE_DAY_S});
+
+        http::stock_api::AggregateBarsArgs args{.symbol_ = "AAPL", .from_ = "2023-01-01", .to_ = "2025-10-01", .timespan_ = 1, .timespan_unit_ = "hour"};
 
         static http::client::CurlGlobal curl_global;
 
-        static std::shared_ptr<http::cache::NetworkCache> cache_layer =
-                std::make_shared<http::cache::NetworkCache>(cache_policy);
+        static std::shared_ptr<http::cache::NetworkCache> cache_layer = std::make_shared<http::cache::NetworkCache>(std::move(cache_policy));
 
-        static std::shared_ptr<http::client::CurlEasy> curl_easy =
-                std::make_shared<http::client::CurlEasy>(cache_layer);
+        static std::shared_ptr<http::client::CurlEasy> curl_easy = std::make_shared<http::client::CurlEasy>(cache_layer);
         curl_easy->enable_keepalive();
         curl_easy->enable_compression();
         curl_easy->prefer_http2_tls();
@@ -46,30 +43,21 @@ int main() {
         //
 
         std::cout << "\n--- Aggregate Bars ---\n";
-        std::cout << "Ticker: " << bars.ticker << "\n";
-        std::cout << "Adjusted: " << (bars.adjusted ? "true" : "false") << "\n";
-        std::cout << "Query count: " << bars.query_count
-                  << "  Result count: " << bars.result_count << "\n";
+        std::cout << "Ticker: " << bars.ticker_ << "\n";
+        std::cout << "Adjusted: " << (bars.adjusted_ ? "true" : "false") << "\n";
+        std::cout << "Query count: " << bars.query_count_ << "  Result count: " << bars.result_count_ << "\n";
 
         std::cout << "\nFirst 5 bars:\n";
-        for (size_t i = 0; i < std::min<size_t>(5, bars.results.size()); ++i) {
-            const auto& b = bars.results[i];
-            std::cout << "#" << i
-                      << " t=" << b.unix_ts_ms
-                      << " o=" << b.open
-                      << " h=" << b.high
-                      << " l=" << b.low
-                      << " c=" << b.close
-                      << " v=" << b.volume
-                      << " vw=" << b.volume_weighted_price
-                      << " n=" << b.tx_count
-                      << " otc=" << (b.is_otc ? "true" : "false")
-                      << "\n";
+        constexpr int MIN_BARS_TO_DISPLAY = 5;
+        for (size_t i = 0; i < std::min<size_t>(MIN_BARS_TO_DISPLAY, bars.results_.size()); ++i) {
+            const auto& b = bars.results_[i];
+            std::cout << "#" << i << " t=" << b.unix_ts_ms_ << " o=" << b.open_ << " h=" << b.high_ << " l=" << b.low_ << " c=" << b.close_
+                      << " v=" << b.volume_ << " vw=" << b.volume_weighted_price_ << " n=" << b.tx_count_ << " otc=" << (b.is_otc_ ? "true" : "false") << "\n";
         }
     } catch (const http::http_error::HttpError& ex) {
-        std::cerr << "HTTP Error " << ex.status << " at " << ex.url << "\n"
+        std::cerr << "HTTP Error " << ex.status_ << " at " << ex.url_ << "\n"
                   << ex.what() << "\n"
-                  << "Body (preview): " << ex.body_preview << "\n";
+                  << "Body (preview): " << ex.body_preview_ << "\n";
         return 1;
     }
     return 0;

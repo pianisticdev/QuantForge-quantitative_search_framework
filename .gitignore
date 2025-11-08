@@ -1,3 +1,17 @@
-cmake-build-debug
-local.env
+# Build directories
+build/
+cmake-build-*/
+
+# IDE
+.cursor/
+.clangd/
 .idea/
+
+# System
+.cache/
+cache
+local.env
+
+# Temp files
+*.tmp
+*.swp

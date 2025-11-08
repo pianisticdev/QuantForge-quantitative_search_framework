@@ -2,34 +2,35 @@
 // Created by Daniel Griffiths on 11/1/25.
 //
 
-#ifndef MONTE_CARLO_AND_BACKTESTER_MODEL_HPP
-#define MONTE_CARLO_AND_BACKTESTER_MODEL_HPP
+#ifndef QUANT_FORGE_MODEL_HPP
+#define QUANT_FORGE_MODEL_HPP
 
 #include <string>
 #include <vector>
 
 namespace http::model {
     struct Request {
-        std::string url;
-        std::vector<std::string> headers;
-        std::string method = "GET";
-        std::string body;
+        std::string url_;
+        std::string method_ = "GET";
+        std::string body_;
+
+        std::vector<std::string> headers_;
     };
 
     struct Response {
-        long status = 0;
-        std::string body;
-        std::string effective_url;
+        long rate_limit_remaining_ = -1;
+        long rate_limit_reset_ = -1;
+        long status_ = 0;
 
-        std::string etag;
-        std::string last_modified;
-        std::string retry_after;
-        std::string cache_control;
-        std::string content_type;
+        std::string body_;
+        std::string effective_url_;
 
-        long rate_limit_remaining = -1;
-        long rate_limit_reset = -1;
+        std::string etag_;
+        std::string last_modified_;
+        std::string retry_after_;
+        std::string cache_control_;
+        std::string content_type_;
     };
-}
+}  // namespace http::model
 
-#endif //MONTE_CARLO_AND_BACKTESTER_MODEL_HPP
+#endif

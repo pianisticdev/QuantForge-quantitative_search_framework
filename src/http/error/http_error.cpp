@@ -3,11 +3,13 @@
 //
 
 #include "http_error.hpp"
-#include <string>
+
 #include <stdexcept>
+#include <string>
 
 namespace http::http_error {
-    HttpError::HttpError(long s, std::string u, std::string preview, std::string msg)
-            : std::runtime_error(std::move(msg)), status(s),
-              url(std::move(u)), body_preview(std::move(preview)) {}
-};
+    HttpError::HttpError(long s, std::string u,
+                         std::string preview,     // NOLINT(bugprone-easily-swappable-parameters)
+                         const std::string &msg)  // NOLINT(bugprone-easily-swappable-parameters)
+        : std::runtime_error(msg), status_(s), url_(std::move(u)), body_preview_(std::move(preview)) {}
+};  // namespace http::http_error

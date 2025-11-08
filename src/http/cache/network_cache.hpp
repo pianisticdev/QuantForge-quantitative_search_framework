@@ -2,76 +2,85 @@
 // Created by Daniel Griffiths on 11/1/25.
 //
 
-#ifndef MONTE_CARLO_AND_BACKTESTER_NETWORK_CACHE_HPP
-#define MONTE_CARLO_AND_BACKTESTER_NETWORK_CACHE_HPP
+#ifndef QUANT_FORGE_NETWORK_CACHE_HPP
+#define QUANT_FORGE_NETWORK_CACHE_HPP
 
-#include "../model/model.hpp"
 #include <filesystem>
 #include <fstream>
 #include <optional>
 #include <string>
 
+#include "../../utils/constants.hpp"
+#include "../model/model.hpp"
+
 namespace http::cache {
-struct RetryPolicy {
-  size_t max_tries = 3;
-  std::chrono::milliseconds base_delay{300};
-  std::chrono::milliseconds max_delay{1500};
-};
+    const long BASE_DELAY_MS = 300;
+    const long MAX_DELAY_MS = 1500;
 
-struct NetworkCachePolicy {
-  bool enable_caching = true;
-  long ttl_s = 60 * 60 * 24;
-};
+    struct CacheControlKeys {
+        static constexpr const char *MAX_AGE_KEY = "max-age";
+        static constexpr const char *NO_CACHE_KEY = "no-cache";
+        static constexpr const char *NO_STORE_KEY = "no-store";
+    };
 
-class NetworkCache {
-public:
-  struct Meta {
-    long unix_ts_s;
-    long status = 0;
-    std::string etag;
-    std::string last_modified;
-    std::string content_type;
-    std::string cache_control;
-    std::string retry_after;
-    long rate_limit_remaining = -1;
-    long rate_limit_reset = -1;
-  };
+    struct RetryPolicy {
+        size_t max_tries_ = 3;
+        std::chrono::milliseconds base_delay_{BASE_DELAY_MS};
+        std::chrono::milliseconds max_delay_{MAX_DELAY_MS};
+    };
 
-  struct Hit {
-    std::ifstream in;
-    std::string url;
-    std::filesystem::path base_path;
-    Meta meta;
-    explicit operator bool() const { return in.is_open(); };
-  };
+    struct NetworkCachePolicy {
+        bool enable_caching_ = true;
+        long ttl_s_ = constants::ONE_DAY_S;
+    };
 
-  NetworkCache(NetworkCachePolicy &policy);
+    class NetworkCache {
+       public:
+        struct Meta {
+            long unix_ts_s_;
+            long status_ = 0;
+            std::string etag_;
+            std::string last_modified_;
+            std::string content_type_;
+            std::string cache_control_;
+            std::string retry_after_;
+            long rate_limit_remaining_ = -1;
+            long rate_limit_reset_ = -1;
+        };
 
-  ~NetworkCache();
-  NetworkCache(const NetworkCache &) = delete;
-  NetworkCache &operator=(const NetworkCache &) = delete;
+        struct Hit {
+            std::ifstream in_;
+            std::string url_;
+            std::filesystem::path base_path_;
+            Meta meta_;
+            explicit operator bool() const { return in_.is_open(); };
+        };
 
-  std::optional<NetworkCache::Hit> probe(const http::model::Request &req) const;
-  http::model::Response get_cached_response(Hit &&hit);
-  void cache_response(const http::model::Request &req,
-                      const http::model::Response &resp);
-  bool fresh_enough(const Meta &meta);
-  void refresh_meta_timestamp(const std::filesystem::path &base_path,
-                              Meta &meta);
-  static bool extract_header_value(const char *buffer, size_t bytes,
-                                   const char *key, std::string &out_property);
-  static bool extract_header_value(const char *buffer, size_t bytes,
-                                   const char *key, long &out_property);
+        NetworkCache(std::unique_ptr<NetworkCachePolicy> policy);
 
-private:
-  NetworkCachePolicy policy_;
+        ~NetworkCache() = default;
+        NetworkCache(const NetworkCache &) = delete;
+        NetworkCache &operator=(const NetworkCache &) = delete;
+        NetworkCache(NetworkCache &&) = delete;
+        NetworkCache &operator=(NetworkCache &&) = delete;
 
-  std::filesystem::path create_base_path(const http::model::Request &req) const;
+        [[nodiscard]] std::optional<NetworkCache::Hit> probe(const http::model::Request &req) const;
+        static http::model::Response get_cached_response(Hit &&hit);
+        void cache_response(const http::model::Request &req, const http::model::Response &resp) const;
+        [[nodiscard]] bool fresh_enough(const Meta &meta) const;
+        static void refresh_meta_timestamp(const std::filesystem::path &base_path, Meta &meta);
+        static bool extract_header_value(const char *buffer, size_t bytes, const char *key, std::string &out_property);
+        static bool extract_header_value(const char *buffer, size_t bytes, const char *key, long &out_property);
 
-  bool load_meta(const std::filesystem::path &p, Meta &out) const;
-  void save_meta_atomic(const std::filesystem::path &p, const Meta &m);
-  void write_atomic(const std::filesystem::path &p, std::string_view bytes);
-};
-} // namespace http::cache
+       private:
+        std::unique_ptr<NetworkCachePolicy> policy_;
 
-#endif // MONTE_CARLO_AND_BACKTESTER_NETWORK_CACHE_HPP
+        [[nodiscard]] static std::filesystem::path create_base_path(const http::model::Request &req);
+
+        static bool load_meta(const std::filesystem::path &p, Meta &out);
+        static void save_meta_atomic(const std::filesystem::path &p, const Meta &m);
+        static void write_atomic(const std::filesystem::path &p, std::string_view bytes);
+    };
+}  // namespace http::cache
+
+#endif
