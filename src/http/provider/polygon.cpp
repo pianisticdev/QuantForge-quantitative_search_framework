@@ -8,6 +8,7 @@
 
 #include <string>
 
+#include "../../utils/constants.hpp"
 #include "../api/stock_api.hpp"
 #include "../error/http_error.hpp"
 #include "../model/model.hpp"
@@ -49,8 +50,9 @@ namespace http::provider {
                 bar.close_ = double(result["c"]);
                 bar.high_ = double(result["h"]);
                 bar.low_ = double(result["l"]);
-                bar.unix_ts_ms_ = (long long)(result["t"]);
+                bar.unix_ts_ns_ = (long long)(result["t"]) * constants::NANOSECONDS_PER_MILLISECOND;
                 bar.tx_count_ = int(result["n"]);
+                bar.symbol_ = std::string(result["ticker"]);
 
                 if (result["otc"].error() == simdjson::SUCCESS) {
                     bar.is_otc_ = bool(result["otc"]);

@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "../../http/api/stock_api.hpp"
-#include "../../http/client/curl_easy.hpp"
 #include "../../plugins/manager/plugin_manager.hpp"
 #include "../../renderers/interface.hpp"
 #include "../stores/data_store.hpp"
@@ -31,8 +30,11 @@ namespace forge {
         void set_data_store(std::unique_ptr<DataStore> data_store);
         void set_report_store(std::unique_ptr<ReportStore> report_store);
         void set_renderer(std::unique_ptr<renderers::IRenderer> renderer);
+        void set_data_provider(std::unique_ptr<http::stock_api::IStockDataProvider> data_provider);
+        void set_http_client_factory(std::function<std::unique_ptr<http::client::IHttpClient>()> http_client_factory);
 
         [[nodiscard]] const ThreadPoolOptions& get_thread_pool_options() const;
+        [[nodiscard]] const std::function<std::unique_ptr<http::client::IHttpClient>()>& get_http_client_factory() const;
 
         void initialize(const InitializationOptions& initialization_options) const;
         void fetch_data() const;
@@ -46,6 +48,8 @@ namespace forge {
         std::unique_ptr<forge::DataStore> data_store_;
         std::unique_ptr<forge::ReportStore> report_store_;
         std::unique_ptr<renderers::IRenderer> renderer_;
+        std::unique_ptr<http::stock_api::IStockDataProvider> data_provider_;
+        std::function<std::unique_ptr<http::client::IHttpClient>()> http_client_factory_;
     };
 
     class ForgeEngineBuilder {
@@ -53,7 +57,7 @@ namespace forge {
         ForgeEngineBuilder();
 
         ForgeEngineBuilder& with_data_provider(std::unique_ptr<http::stock_api::IStockDataProvider> provider);
-        ForgeEngineBuilder& with_http_client(std::unique_ptr<http::client::CurlEasy> http_client);
+        ForgeEngineBuilder& with_http_client_factory(std::function<std::unique_ptr<http::client::IHttpClient>()> http_client_factory);
         ForgeEngineBuilder& with_thread_pools(const ThreadPoolOptions& thread_pool_options);
         ForgeEngineBuilder& with_plugin_names(const std::vector<std::string>& plugin_names);
         ForgeEngineBuilder& with_renderer(std::unique_ptr<renderers::IRenderer> renderer);
@@ -63,7 +67,6 @@ namespace forge {
        private:
         std::unique_ptr<ForgeEngine> forge_engine_;
         std::unique_ptr<http::stock_api::IStockDataProvider> data_provider_;
-        std::unique_ptr<http::client::CurlEasy> http_client_;
         std::vector<std::string> plugin_names_;
     };
 

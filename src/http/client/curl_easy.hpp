@@ -13,6 +13,7 @@
 
 #include "../cache/network_cache.hpp"
 #include "../model/model.hpp"
+#include "interface.hpp"
 
 struct curl_slist;
 
@@ -28,18 +29,18 @@ namespace http::client {
         OK = 200,
     };
 
-    class CurlEasy {
+    class CurlEasy : public IHttpClient {
        public:
         CurlEasy(std::unique_ptr<http::cache::NetworkCache> cache_layer);
 
-        ~CurlEasy();
+        ~CurlEasy() override;
         CurlEasy(const CurlEasy&) = delete;
         CurlEasy& operator=(const CurlEasy&) = delete;
         CurlEasy(CurlEasy&&) = delete;
         CurlEasy& operator=(CurlEasy&&) = delete;
 
-        http::model::Response get(const http::model::Request& req);
-        http::model::Response get_with_retries(const http::model::Request& req, const http::cache::RetryPolicy& p = {});
+        http::model::Response get(const http::model::Request& req) override;
+        http::model::Response get_with_retries(const http::model::Request& req, const http::cache::RetryPolicy& p = {}) override;
         static std::chrono::milliseconds get_retry_delay(const http::cache::RetryPolicy& p, std::chrono::milliseconds& delay);
         void set_url(const std::string& u);
         void set_headers(const std::vector<std::string>& hs);

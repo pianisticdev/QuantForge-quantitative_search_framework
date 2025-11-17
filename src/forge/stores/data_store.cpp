@@ -70,5 +70,45 @@ namespace forge {
     void DataStore::clear() {
         std::lock_guard<std::mutex> lock(mutex_);
         bars_.clear();
+        iterable_plugin_data_.clear();
+    }
+
+    bool DataStore::has_iterable_plugin_data(const std::string& plugin_name) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return iterable_plugin_data_.find(plugin_name) != iterable_plugin_data_.end();
+    }
+
+    void DataStore::create_iterable_plugin_data(const std::string& plugin_name) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (has_iterable_plugin_data(plugin_name)) {
+            return;
+        }
+
+        auto bars = get_all_bars_for_plugin(plugin_name);
+
+        if (!bars) {
+            return;
+        }
+
+        std::vector<http::stock_api::AggregateBarResult> iterable_bars;
+
+        for (const auto& [symbol, bars] : *bars) {
+            iterable_bars.insert(iterable_bars.end(), bars.results_.begin(), bars.results_.end());
+        }
+
+        std::sort(iterable_bars.begin(), iterable_bars.end(), [](const auto& a, const auto& b) { return a.unix_ts_ns_ < b.unix_ts_ns_; });
+
+        iterable_plugin_data_[plugin_name] = iterable_bars;
+    }
+
+    std::vector<http::stock_api::AggregateBarResult> DataStore::get_iterable_plugin_data(const std::string& plugin_name) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (!has_iterable_plugin_data(plugin_name)) {
+            create_iterable_plugin_data(plugin_name);
+        }
+
+        return iterable_plugin_data_.at(plugin_name);
     }
 }  // namespace forge

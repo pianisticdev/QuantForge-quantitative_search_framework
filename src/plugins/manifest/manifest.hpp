@@ -37,86 +37,114 @@ namespace plugins::manifest {
         std::optional<bool> allow_fractional_shares_;
         int monte_carlo_runs_;
         int monte_carlo_seed_;
-        std::optional<int> leverage_;
         std::optional<double> commission_;
         std::optional<double> slippage_;
         std::optional<double> tax_;
-        long long initial_capital_;
+        int64_t initial_capital_;
         std::optional<std::string> commission_type_;
         std::optional<std::string> slippage_model_;
-        std::optional<std::string> currency_;
+        std::optional<std::string> default_currency_;
         std::optional<std::string> timezone_;
         std::optional<std::string> optimization_mode_;
         std::string backtest_start_datetime_;
         std::string backtest_end_datetime_;
         std::vector<Symbol> symbols_;
+
+        std::optional<std::string> position_sizing_method_;
+        std::optional<double> position_size_value_;
+        std::optional<double> max_position_size_;
+        std::optional<int> max_concurrent_positions_;
+        std::optional<bool> use_stop_loss_;
+        std::optional<double> stop_loss_pct_;
+        std::optional<bool> use_take_profit_;
+        std::optional<double> take_profit_pct_;
+        std::optional<std::string> execution_model_;
+        std::optional<int> fill_delay_bars_;
     };
 
-    inline const ParserOptions<std::string_view> NAME_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid name"};
-    inline const ParserOptions<std::string_view> KIND_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {"python", "native"}, .fallback_value_ = "", .error_message_ = "Invalid kind"};
-    inline const ParserOptions<std::string_view> ENTRY_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid entry"};
-    inline const ParserOptions<std::string_view> DESCRIPTION_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = false, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid description"};
-    inline const ParserOptions<std::string_view> AUTHOR_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = false, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid author"};
-    inline const ParserOptions<long long> API_VERSION_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {PLUGIN_API_VERSION}, .fallback_value_ = 0, .error_message_ = "Invalid api version"};
-    inline const ParserOptions<std::string_view> VERSION_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid version"};
-    inline const ParserOptions<std::string_view> STRATEGY_PARAMS_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid strategy params"};
-    inline const ParserOptions<bool> PRIMARY_PARSER_OPTIONS =
-        ParserOptions<bool>{.is_required_ = true, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid primary"};
-    inline const ParserOptions<long long> TIMESPAN_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid timespan"};
-    inline const ParserOptions<std::string_view> SYMBOL_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid symbol"};
-    inline const ParserOptions<std::string_view> TIMESPAN_UNIT_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true,
-                                        .allowed_values_ = {"second", "minute", "hour", "day", "week", "month", "year"},
-                                        .fallback_value_ = "",
-                                        .error_message_ = "Invalid timespan unit"};
-    inline const ParserOptions<bool> MARKET_HOURS_ONLY_PARSER_OPTIONS =
-        ParserOptions<bool>{.is_required_ = true, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid market hours only"};
-    inline const ParserOptions<bool> ALLOW_FRACTIONAL_SHARES_PARSER_OPTIONS = ParserOptions<bool>{
+    const ParserOptions<std::string_view> NAME_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid name"};
+    const ParserOptions<std::string_view> KIND_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {"python", "native"}, .fallback_value_ = "", .error_message_ = "Invalid kind"};
+    const ParserOptions<std::string_view> ENTRY_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid entry"};
+    const ParserOptions<std::string_view> DESCRIPTION_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid description"};
+    const ParserOptions<std::string_view> AUTHOR_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid author"};
+    const ParserOptions<long long> API_VERSION_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {PLUGIN_API_VERSION}, .fallback_value_ = 0, .error_message_ = "Invalid api version"};
+    const ParserOptions<std::string_view> VERSION_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid version"};
+    const ParserOptions<std::string_view> STRATEGY_PARAMS_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid strategy params"};
+    const ParserOptions<bool> PRIMARY_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid primary"};
+    const ParserOptions<long long> TIMESPAN_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid timespan"};
+    const ParserOptions<std::string_view> SYMBOL_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid symbol"};
+    const ParserOptions<std::string_view> TIMESPAN_UNIT_PARSER_OPTIONS = {.is_required_ = true,
+                                                                          .allowed_values_ = {"second", "minute", "hour", "day", "week", "month", "year"},
+                                                                          .fallback_value_ = "",
+                                                                          .error_message_ = "Invalid timespan unit"};
+    const ParserOptions<bool> MARKET_HOURS_ONLY_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid market hours only"};
+    const ParserOptions<bool> ALLOW_FRACTIONAL_SHARES_PARSER_OPTIONS = {
         .is_required_ = true, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid allow fractional shares"};
-    inline const ParserOptions<long long> MONTE_CARLO_RUNS_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid monte carlo runs"};
-    inline const ParserOptions<long long> MONTE_CARLO_SEED_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid monte carlo seed"};
-    inline const ParserOptions<long long> LEVERAGE_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid leverage"};
-    inline const ParserOptions<double> COMMISSION_PARSER_OPTIONS =
-        ParserOptions<double>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid commission"};
-    inline const ParserOptions<std::string_view> COMMISSION_TYPE_PARSER_OPTIONS = ParserOptions<std::string_view>{
+    const ParserOptions<long long> MONTE_CARLO_RUNS_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid monte carlo runs"};
+    const ParserOptions<long long> MONTE_CARLO_SEED_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid monte carlo seed"};
+    const ParserOptions<long long> LEVERAGE_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid leverage"};
+    const ParserOptions<double> COMMISSION_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid commission"};
+    const ParserOptions<std::string_view> COMMISSION_TYPE_PARSER_OPTIONS = {
         .is_required_ = true, .allowed_values_ = {"per_share", "percentage", "flat"}, .fallback_value_ = "", .error_message_ = "Invalid commission type"};
-    inline const ParserOptions<double> SLIPPAGE_PARSER_OPTIONS =
-        ParserOptions<double>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid slippage"};
-    inline const ParserOptions<std::string_view> SLIPPAGE_MODEL_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true,
-                                        .allowed_values_ = {"none", "fixed", "percentage", "volume_based"},
-                                        .fallback_value_ = "",
-                                        .error_message_ = "Invalid slippage model"};
-    inline const ParserOptions<double> TAX_PARSER_OPTIONS =
-        ParserOptions<double>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid tax"};
-    inline const ParserOptions<std::string_view> CURRENCY_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {"USD"}, .fallback_value_ = "", .error_message_ = "Invalid currency"};
-    inline const ParserOptions<std::string_view> TIMEZONE_PARSER_OPTIONS = ParserOptions<std::string_view>{
+    const ParserOptions<double> SLIPPAGE_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid slippage"};
+    const ParserOptions<std::string_view> SLIPPAGE_MODEL_PARSER_OPTIONS = {.is_required_ = true,
+                                                                           .allowed_values_ = {"none", "fixed", "percentage", "volume_based"},
+                                                                           .fallback_value_ = "",
+                                                                           .error_message_ = "Invalid slippage model"};
+    const ParserOptions<double> TAX_PARSER_OPTIONS = {.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid tax"};
+    const ParserOptions<std::string_view> DEFAULT_CURRENCY_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {"USD"}, .fallback_value_ = "", .error_message_ = "Invalid currency"};
+    const ParserOptions<std::string_view> TIMEZONE_PARSER_OPTIONS = {
         .is_required_ = true, .allowed_values_ = {"America/New_York"}, .fallback_value_ = "", .error_message_ = "Invalid timezone"};
-    inline const ParserOptions<std::string_view> OPTIMIZATION_MODE_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true,
-                                        .allowed_values_ = {"none", "grid_search", "bayesian", "genetic"},
-                                        .fallback_value_ = "",
-                                        .error_message_ = "Invalid optimization mode"};
-    inline const ParserOptions<std::string_view> BACKTEST_START_DATETIME_PARSER_OPTIONS = ParserOptions<std::string_view>{
+    const ParserOptions<std::string_view> OPTIMIZATION_MODE_PARSER_OPTIONS = {.is_required_ = true,
+                                                                              .allowed_values_ = {"none", "grid_search", "bayesian", "genetic"},
+                                                                              .fallback_value_ = "",
+                                                                              .error_message_ = "Invalid optimization mode"};
+    const ParserOptions<std::string_view> BACKTEST_START_DATETIME_PARSER_OPTIONS = {
         .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid backtest start datetime"};
-    inline const ParserOptions<std::string_view> BACKTEST_END_DATETIME_PARSER_OPTIONS =
-        ParserOptions<std::string_view>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid backtest end datetime"};
-    inline const ParserOptions<long long> INITIAL_CAPITAL_PARSER_OPTIONS =
-        ParserOptions<long long>{.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid initial capital"};
+    const ParserOptions<std::string_view> BACKTEST_END_DATETIME_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "", .error_message_ = "Invalid backtest end datetime"};
+    const ParserOptions<std::string_view> INITIAL_CAPITAL_PARSER_OPTIONS = {
+        .is_required_ = true, .allowed_values_ = {}, .fallback_value_ = "0", .error_message_ = "Invalid initial capital, please provide a valid money string"};
+    const ParserOptions<std::string_view> POSITION_SIZING_METHOD_PARSER_OPTIONS = {.is_required_ = false,
+                                                                                   .allowed_values_ = {"fixed_percentage", "fixed_dollar", "equal_weight"},
+                                                                                   .fallback_value_ = "fixed_percentage",
+                                                                                   .error_message_ = "Invalid position sizing method"};
+    const ParserOptions<double> POSITION_SIZE_VALUE_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 0.01, .error_message_ = "Invalid position size value"};
+    const ParserOptions<double> MAX_POSITION_SIZE_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid max position size"};
+    const ParserOptions<long long> MAX_CONCURRENT_POSITIONS_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 1, .error_message_ = "Invalid max concurrent positions"};
+    const ParserOptions<bool> USE_STOP_LOSS_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid use stop loss"};
+    const ParserOptions<double> STOP_LOSS_PCT_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 0.05, .error_message_ = "Invalid stop loss pct"};
+    const ParserOptions<bool> USE_TAKE_PROFIT_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {true, false}, .fallback_value_ = false, .error_message_ = "Invalid use take profit"};
+    const ParserOptions<double> TAKE_PROFIT_PCT_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 0.05, .error_message_ = "Invalid take profit pct"};
+    const ParserOptions<std::string_view> EXECUTION_MODEL_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {"immediate", "delayed"}, .fallback_value_ = "immediate", .error_message_ = "Invalid execution model"};
+    const ParserOptions<long long> FILL_DELAY_BARS_PARSER_OPTIONS = {
+        .is_required_ = false, .allowed_values_ = {}, .fallback_value_ = 0, .error_message_ = "Invalid fill delay bars"};
 
     class PluginManifest {
        public:

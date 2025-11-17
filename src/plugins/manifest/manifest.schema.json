@@ -103,11 +103,6 @@
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?$"
         },
-        "leverage": {
-          "type": "string",
-          "pattern": "^\\d+(\\.\\d+)?$",
-          "default": "1"
-        },
         "commission": {
           "type": "string",
           "pattern": "^\\d+(\\.\\d+)?$",
@@ -133,7 +128,7 @@
           "pattern": "^\\d+(\\.\\d+)?$",
           "default": "0"
         },
-        "currency": {
+        "default_currency": {
           "type": "string",
           "pattern": "^[A-Z]{3}$",
           "default": "USD"
@@ -149,6 +144,63 @@
         "allow_fractional_shares": {
           "type": "boolean",
           "default": false
+        },
+
+        //
+        // Configuration for signal based back testing
+        //
+        "position_sizing_method": {
+          "type": "string",
+          "enum": ["fixed_percentage", "fixed_dollar", "equal_weight"],
+          "default": "fixed_percentage"
+        },
+        "position_size_value": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.10
+        },
+        "max_position_size": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.30
+        },
+        "max_concurrent_positions": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "use_stop_loss": {
+          "type": "boolean",
+          "default": false
+        },
+        "stop_loss_pct": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.02
+        },
+        "use_take_profit": {
+          "type": "boolean",
+          "default": false
+        },
+        "take_profit_pct": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.10
+        },
+        "execution_model": {
+          "type": "string",
+          "enum": ["market", "realistic"],
+          "default": "market"
+        },
+        "fill_delay_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 1
         }
       }
     },

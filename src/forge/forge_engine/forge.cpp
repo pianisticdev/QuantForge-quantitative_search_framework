@@ -4,7 +4,6 @@
 #include <thread>
 
 #include "../../http/api/stock_api.hpp"
-#include "../../http/client/curl_easy.hpp"
 #include "../../plugins/manager/plugin_manager.hpp"
 #include "../../simulators/back_test/back_test_engine.hpp"
 #include "../../simulators/monte_carlo/monte_carlo_engine.hpp"
@@ -21,12 +20,12 @@ namespace forge {
     ForgeEngineBuilder::ForgeEngineBuilder() : forge_engine_(std::make_unique<ForgeEngine>()) {}
 
     ForgeEngineBuilder& ForgeEngineBuilder::with_data_provider(std::unique_ptr<http::stock_api::IStockDataProvider> provider) {
-        data_provider_ = std::move(provider);
+        forge_engine_->set_data_provider(std::move(provider));
         return *this;
     }
 
-    ForgeEngineBuilder& ForgeEngineBuilder::with_http_client(std::unique_ptr<http::client::CurlEasy> http_client) {
-        http_client_ = std::move(http_client);
+    ForgeEngineBuilder& ForgeEngineBuilder::with_http_client_factory(std::function<std::unique_ptr<http::client::IHttpClient>()> http_client_factory) {
+        forge_engine_->set_http_client_factory(std::move(http_client_factory));
         return *this;
     }
 
@@ -49,7 +48,7 @@ namespace forge {
         if (data_provider_ == nullptr) {
             throw std::runtime_error("Data provider is required");
         }
-        if (http_client_ == nullptr) {
+        if (forge_engine_->get_http_client_factory() == nullptr) {
             throw std::runtime_error("HTTP client is required");
         }
         if (plugin_names_.empty()) {
@@ -65,7 +64,6 @@ namespace forge {
     }
 
     std::unique_ptr<ForgeEngine> ForgeEngineBuilder::build() {
-        forge_engine_->set_stock_api(std::make_unique<http::stock_api::StockAPI>(std::move(data_provider_), std::move(http_client_)));
         forge_engine_->set_plugin_manager(std::make_unique<plugins::manager::PluginManager>(plugin_names_));
         forge_engine_->set_data_store(std::make_unique<DataStore>());
         forge_engine_->set_report_store(std::make_unique<ReportStore>());
@@ -106,11 +104,15 @@ namespace forge {
             auto host_params = plugin_ptr->get_host_params();
 
             auto* data_store_ptr = data_store_.get();
-            auto* stock_api_ptr = stock_api_.get();
+            auto* data_provider_ptr = data_provider_.get();
 
             for (const auto& symbol : host_params.symbols_) {
-                pool.enqueue([data_store_ptr, plugin_ptr, stock_api_ptr, symbol, host_params]() {
-                    auto bars = stock_api_ptr->custom_aggregate_bars(http::stock_api::AggregateBarsArgs{
+                pool.enqueue([data_store_ptr, plugin_ptr, data_provider_ptr, symbol, host_params, this]() {
+                    auto http_client = http_client_factory_();
+
+                    auto stock_api = std::make_unique<http::stock_api::StockAPI>(data_provider_ptr, std::move(http_client));
+
+                    auto bars = stock_api->custom_aggregate_bars(http::stock_api::AggregateBarsArgs{
                         .symbol_ = symbol.symbol_,
                         .timespan_unit_ = symbol.timespan_unit_,
                         .timespan_ = symbol.timespan_,
@@ -129,6 +131,7 @@ namespace forge {
     void ForgeEngine::run() const {
         concurrency::ThreadPool pool(thread_pool_options_.compute_threads_);
 
+        // Goal: Embarrassingly parallelize
         plugin_manager_->with_plugins([&](auto* plugin_ptr) {
             auto* data_store_ptr = data_store_.get();
             auto* report_store_ptr = report_store_.get();

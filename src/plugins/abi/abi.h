@@ -10,7 +10,18 @@ extern "C" {
 
 #define PLUGIN_API_VERSION 1
 
+typedef struct Instruction {
+    const char* symbol_;
+    const char* action_;
+    double quantity_;
+
+    const char* order_type_;
+    int64_t limit_price_;
+    int64_t stop_loss_price_;
+} Instruction;
+
 typedef struct Bar {
+    const char* symbol_;
     int64_t unix_ts_ns_;
     double open_;
     double high_;
@@ -39,6 +50,8 @@ typedef struct SimulatorContext {
 typedef struct PluginResult {
     int32_t code_;         // 0 == OK
     const char* message_;  // optional (owned by plugin, valid until next call)
+    const Instruction* instructions_;
+    size_t instructions_count_;
 } PluginResult;
 
 typedef struct PluginVTable {

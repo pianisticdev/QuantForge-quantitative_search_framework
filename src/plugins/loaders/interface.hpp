@@ -9,27 +9,27 @@
 
 namespace plugins::loaders {
 
-    const int64_t NANOSECONDS_PER_MILLISECOND = 1000000;
-
     inline Bar to_plugin_bar(const http::stock_api::AggregateBarResult& bar) {
         return Bar{
-            .unix_ts_ns_ = bar.unix_ts_ms_ * NANOSECONDS_PER_MILLISECOND,
+            .unix_ts_ns_ = bar.unix_ts_ns_,
             .open_ = bar.open_,
             .high_ = bar.high_,
             .low_ = bar.low_,
             .close_ = bar.close_,
             .volume_ = bar.volume_,
+            .symbol_ = bar.symbol_.c_str(),
         };
     }
 
     inline http::stock_api::AggregateBarResult to_http_bar(const Bar& bar) {
         return http::stock_api::AggregateBarResult{
-            .unix_ts_ms_ = bar.unix_ts_ns_ / NANOSECONDS_PER_MILLISECOND,
+            .unix_ts_ns_ = bar.unix_ts_ns_,
             .open_ = bar.open_,
             .high_ = bar.high_,
             .low_ = bar.low_,
             .close_ = bar.close_,
             .volume_ = bar.volume_,
+            .symbol_ = bar.symbol_,
         };
     }
 

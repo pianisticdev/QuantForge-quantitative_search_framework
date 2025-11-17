@@ -31,15 +31,15 @@ int main() {
 
         http::client::CurlGlobal curl_global;
 
-        auto network_cache_policy =
-            std::make_unique<http::cache::NetworkCachePolicy>(http::cache::NetworkCachePolicy{.enable_caching_ = is_cache_enabled, .ttl_s_ = cache_ttl_s});
-        auto network_cache = std::make_unique<http::cache::NetworkCache>(std::move(network_cache_policy));
-        auto http_client = std::make_unique<http::client::CurlEasy>(std::move(network_cache));
-
         auto data_provider = std::make_unique<http::provider::PolygonProvider>(polygon_api_key);
 
         auto engine = forge::ForgeEngineBuilder()
-                          .with_http_client(std::move(http_client))
+                          .with_http_client_factory([]() {
+                              auto network_cache_policy = std::make_unique<http::cache::NetworkCachePolicy>(
+                                  http::cache::NetworkCachePolicy{.enable_caching_ = is_cache_enabled, .ttl_s_ = cache_ttl_s});
+                              auto network_cache = std::make_unique<http::cache::NetworkCache>(std::move(network_cache_policy));
+                              return std::make_unique<http::client::CurlEasy>(std::move(network_cache));
+                          })
                           .with_data_provider(std::move(data_provider))
                           .with_thread_pools(forge::ThreadPoolOptions{.io_threads_ = max_threads / 2, .compute_threads_ = max_threads})
                           .with_plugin_names(enabled_plugin_names)

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <queue>
 #include <thread>
@@ -28,6 +29,8 @@ namespace concurrency {
         std::mutex queue_mutex_;
         std::condition_variable condition_variable_;
         std::atomic<bool> stop_ = false;
+        std::atomic<size_t> active_tasks_ = 0;
+        std::condition_variable completion_cv_;
     };
 }  // namespace concurrency
 

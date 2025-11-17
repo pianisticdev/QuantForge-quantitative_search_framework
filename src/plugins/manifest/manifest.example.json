@@ -7,14 +7,11 @@
   "description": "A simple SMA strategy implemented in Python",
   "author": "John Doe",
   "host_params": {
-    "initial_capital": "100000",
-    "leverage": "1",
-    "commission": "0.0001",
-    "commission_type": "per_share",
-    "slippage": "0",
-    "slippage_model": "none",
-    "tax": "0.001",
-    "currency": "USD",
+    //
+    // Portfolio strategy configuration
+    //
+    "initial_capital": "100000.50",
+    "default_currency": "USD",
     "timezone": "America/New_York",
     "symbols": [
       {
@@ -30,13 +27,40 @@
         "primary": false
       }
     ],
+
+    //
+    // Signal based back testing configuration
+    //
+    "position_sizing_method": "fixed_percentage",
+    "position_size_value": 0.10,
+    "max_position_size": 0.30,
+    "max_concurrent_positions": 5,
+    "use_stop_loss": true,
+    "stop_loss_pct": 0.02,
+    "use_take_profit": false,
+    "take_profit_pct": 0.10,
+    "execution_model": "realistic",
+    "fill_delay_bars": 1,
+
+    //
+    // Exchange configuration
+    //
+    "tax": "0.001",
+    "commission": "0.0001",
+    "commission_type": "per_share",
+    "slippage": "0",
+    "slippage_model": "none",
+    "market_hours_only": false,
+    "allow_fractional_shares": false,
+
+    //
+    // Simulation parameters
+    //
     "backtest_start_datetime": "2023-01-01T00:00:00Z",
     "backtest_end_datetime": "2025-10-01T00:00:00Z",
     "monte_carlo_runs": 1,
     "monte_carlo_seed": null,
-    "optimization_mode": "none",
-    "market_hours_only": false,
-    "allow_fractional_shares": false
+    "optimization_mode": "none"
   },
   "strategy_params": {
     "fast": 10,

@@ -13,9 +13,9 @@
 const long HTTP_SUCCESS_UPPER_BOUNDARY = 300;
 
 namespace http::stock_api {
-    StockAPI::StockAPI(std::unique_ptr<IStockDataProvider> p, std::unique_ptr<http::client::CurlEasy> ce) : provider_(std::move(p)), http_(std::move(ce)) {}
+    StockAPI::StockAPI(const IStockDataProvider* p, std::unique_ptr<http::client::IHttpClient> ce) : provider_(p), http_(std::move(ce)) {}
 
-    AggregateBars StockAPI::custom_aggregate_bars(const AggregateBarsArgs &args) {
+    AggregateBars StockAPI::custom_aggregate_bars(const AggregateBarsArgs& args) {
         const http::model::Request req = provider_->build_custom_aggregate_bars(args);
         const http::model::Response resp = http_->get_with_retries(req);
 

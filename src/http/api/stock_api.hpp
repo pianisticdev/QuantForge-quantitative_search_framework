@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "../client/curl_easy.hpp"
+#include "../client/interface.hpp"
 #include "../model/model.hpp"
 
 namespace http::stock_api {
@@ -22,6 +22,7 @@ namespace http::stock_api {
     };
 
     struct AggregateBarResult {
+        std::string symbol_;
         bool is_otc_{};
         int tx_count_{};
         double volume_{};
@@ -30,7 +31,7 @@ namespace http::stock_api {
         double close_{};
         double high_{};
         double low_{};
-        long long unix_ts_ms_{};
+        long long unix_ts_ns_{};
     };
 
     struct AggregateBars {
@@ -56,12 +57,13 @@ namespace http::stock_api {
 
     class StockAPI {
        public:
-        explicit StockAPI(std::unique_ptr<IStockDataProvider> p, std::unique_ptr<http::client::CurlEasy> ce);
+        explicit StockAPI(std::unique_ptr<IStockDataProvider> p, std::unique_ptr<http::client::IHttpClient> ce);
+        explicit StockAPI(const IStockDataProvider* p, std::unique_ptr<http::client::IHttpClient> ce);
         AggregateBars custom_aggregate_bars(const AggregateBarsArgs& args);
 
        private:
-        std::unique_ptr<IStockDataProvider> provider_;
-        std::shared_ptr<http::client::CurlEasy> http_;
+        const IStockDataProvider* provider_;
+        std::shared_ptr<http::client::IHttpClient> http_;
     };
 
 }  // namespace http::stock_api
