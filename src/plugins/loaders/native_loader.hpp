@@ -4,6 +4,7 @@
 #include <string>
 
 #include "../../http/api/stock_api.hpp"
+#include "../../simulators/back_test/models.hpp"
 #include "../abi/abi.h"
 #include "../abi/lib_handler.hpp"
 #include "../manifest/manifest.hpp"
@@ -18,8 +19,8 @@ namespace plugins::loaders {
         void load_plugin(const SimulatorContext& ctx) override;
         void on_init() const override;
         [[nodiscard]] PluginResult on_start() const override;
-        [[nodiscard]] PluginResult on_bar(const http::stock_api::AggregateBarResult& bar) const override;
-        [[nodiscard]] PluginResult on_end() const override;
+        [[nodiscard]] PluginResult on_bar(const http::stock_api::AggregateBarResult& bar, models::BackTestState& state) const override;
+        [[nodiscard]] PluginResult on_end(const char** json_out) const override;
         void free_string(const char* str) const override;
         [[nodiscard]] std::string get_plugin_name() const override;
         void unload_plugin() override;

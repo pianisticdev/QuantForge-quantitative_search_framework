@@ -10,7 +10,20 @@ extern "C" {
 
 #define PLUGIN_API_VERSION 1
 
-typedef struct Instruction {
+typedef struct CTrade {
+    const char* symbol_;
+    double quantity_;
+    double price_;
+    int64_t timestamp_ns_;
+} CTrade;
+
+typedef struct CPosition {
+    const char* symbol_;
+    double quantity_;
+    double average_price_;
+} CPosition;
+
+typedef struct CInstruction {
     const char* symbol_;
     const char* action_;
     double quantity_;
@@ -18,7 +31,30 @@ typedef struct Instruction {
     const char* order_type_;
     int64_t limit_price_;
     int64_t stop_loss_price_;
-} Instruction;
+} CInstruction;
+
+typedef struct CEquitySnapshot {
+    int64_t timestamp_ns_;
+    double equity_;
+    double return_;
+    double max_drawdown_;
+    double sharpe_ratio_;
+    double sortino_ratio_;
+    double calmar_ratio_;
+    double tail_ratio_;
+    double value_at_risk_;
+    double conditional_value_at_risk_;
+} CEquitySnapshot;
+
+typedef struct CState {
+    int64_t cash_;
+    const CPosition* positions_;
+    size_t positions_count_;
+    const CTrade* trade_history_;
+    size_t trade_history_count_;
+    const CEquitySnapshot* equity_curve_;
+    size_t equity_curve_count_;
+} CState;
 
 typedef struct Bar {
     const char* symbol_;
@@ -50,7 +86,7 @@ typedef struct SimulatorContext {
 typedef struct PluginResult {
     int32_t code_;         // 0 == OK
     const char* message_;  // optional (owned by plugin, valid until next call)
-    const Instruction* instructions_;
+    const CInstruction* instructions_;
     size_t instructions_count_;
 } PluginResult;
 
@@ -61,13 +97,13 @@ typedef struct PluginVTable {
 
     PluginResult (*on_start)(void* self);
 
-    PluginResult (*on_bar)(void* self, const Bar* bar);
+    PluginResult (*on_bar)(void* self, const Bar* bar, const CState* state);
 
     // Provides a nullptr to the plugin
     // The plugin is responsible for building the JSON string
     PluginResult (*on_end)(void* self, const char** json_out);
     // The plugin needs to free the string, which can be called after on_end by the host
-    void (*free_string)(void* self, const char* p);
+    void (*free_string)(void* self, const char* json_out_str);
 } PluginVTable;
 // NOLINTEND(readability-identifier-naming)
 

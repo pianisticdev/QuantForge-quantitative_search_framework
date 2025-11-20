@@ -33,14 +33,17 @@ namespace plugins::manager {
                 continue;
             }
 
-            std::unique_ptr<plugins::loaders::IPluginLoader> loader;
-            if (plugin_manifest->is_python()) {
-                loader = std::make_unique<plugins::loaders::PythonLoader>(std::move(plugin_manifest));
-            } else if (plugin_manifest->is_native()) {
-                loader = std::make_unique<plugins::loaders::NativeLoader>(std::move(plugin_manifest));
-            } else {
+            auto loader = [&]() -> std::unique_ptr<plugins::loaders::IPluginLoader> {
+                if (plugin_manifest->is_python()) {
+                    return std::make_unique<plugins::loaders::PythonLoader>(std::move(plugin_manifest));
+                }
+
+                if (plugin_manifest->is_native()) {
+                    return std::make_unique<plugins::loaders::NativeLoader>(std::move(plugin_manifest));
+                }
+
                 throw std::runtime_error("Unknown plugin kind in manifest");
-            }
+            }();
 
             loader->load_plugin(ctx_);
 

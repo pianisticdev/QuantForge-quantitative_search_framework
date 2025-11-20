@@ -4,6 +4,7 @@
 #include <pybind11/pybind11.h>
 
 #include "../../http/api/stock_api.hpp"
+#include "../../simulators/back_test/models.hpp"
 #include "../abi/abi.h"
 #include "../abi/lib_handler.hpp"
 #include "../manifest/manifest.hpp"
@@ -64,41 +65,40 @@ namespace plugins::loaders {
 
     PluginResult NativeLoader::on_start() const {
         if (exp_.api_version_ != PLUGIN_API_VERSION) {
-            return PluginResult{1, "Invalid API Version"};
+            return PluginResult{1, "Invalid API Version", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
         if (exp_.vtable_.on_start == nullptr) {
-            return PluginResult{1, "Undefined Method on_start"};
+            return PluginResult{1, "Undefined Method on_start", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
         return exp_.vtable_.on_start(exp_.instance_);
     }
 
-    PluginResult NativeLoader::on_bar(const http::stock_api::AggregateBarResult& bar) const {
+    PluginResult NativeLoader::on_bar(const http::stock_api::AggregateBarResult& bar, models::BackTestState& state) const {
         if (exp_.api_version_ != PLUGIN_API_VERSION) {
-            return PluginResult{1, "Invalid API Version"};
+            return PluginResult{1, "Invalid API Version", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
         if (exp_.vtable_.on_bar == nullptr) {
-            return PluginResult{1, "Undefined Method on_bar"};
+            return PluginResult{1, "Undefined Method on_bar", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
         Bar plugin_bar = plugins::loaders::to_plugin_bar(bar);
-        return exp_.vtable_.on_bar(exp_.instance_, &plugin_bar);
+        CState c_state = models::BackTestState::to_c_state(state);
+        return exp_.vtable_.on_bar(exp_.instance_, &plugin_bar, &c_state);
     }
 
-    PluginResult NativeLoader::on_end() const {
+    PluginResult NativeLoader::on_end(const char** json_out) const {
         if (exp_.api_version_ != PLUGIN_API_VERSION) {
-            return PluginResult{1, "Invalid API Version"};
+            return PluginResult{1, "Invalid API Version", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
         if (exp_.vtable_.on_end == nullptr) {
-            return PluginResult{1, "Undefined Method on_end"};
+            return PluginResult{1, "Undefined Method on_end", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
-        const char* json_out = nullptr;
-
-        return exp_.vtable_.on_end(exp_.instance_, &json_out);
+        return exp_.vtable_.on_end(exp_.instance_, json_out);
     }
 
     void NativeLoader::free_string(const char* str) const {
