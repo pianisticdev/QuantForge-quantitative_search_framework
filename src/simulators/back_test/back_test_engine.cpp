@@ -37,7 +37,7 @@ namespace simulators {
                 throw std::runtime_error("Plugin on_bar failed: " + std::string(result.message_));
             }
 
-            process_order_book(bar, host_params);
+            execute_order_book(bar, host_params);
 
             schedule_plugin_instructions(result, host_params);
 
@@ -59,7 +59,7 @@ namespace simulators {
         };
     }
 
-    void BackTestEngine::process_order_book(const http::stock_api::AggregateBarResult& bar, const plugins::manifest::HostParams& host_params) {
+    void BackTestEngine::execute_order_book(const http::stock_api::AggregateBarResult& bar, const plugins::manifest::HostParams& host_params) {
         while (!order_book_.empty()) {
             auto top_order_optional = order_book_.top();
 

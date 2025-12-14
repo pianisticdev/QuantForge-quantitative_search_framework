@@ -78,7 +78,7 @@ namespace simulators {
             }
         }
         position.average_price_ =
-            (fill.price_ + (position.average_price_ * static_cast<double>(fills_for_symbol.size()))) / (static_cast<double>(fills_for_symbol.size()) + 1);
+            ((position.average_price_ * position.quantity_) + (fill.price_ * fillable_quantity)) / (position.quantity_ + fillable_quantity);
 
         if (remaining_quantity > 0) {
             models::Order partial_order = order;

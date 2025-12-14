@@ -28,7 +28,7 @@ namespace simulators {
        public:
         BackTestEngine(const plugins::loaders::IPluginLoader* plugin, const forge::DataStore* data_store);
         void run();
-        void process_order_book(const http::stock_api::AggregateBarResult& bar, const plugins::manifest::HostParams& host_params);
+        void execute_order_book(const http::stock_api::AggregateBarResult& bar, const plugins::manifest::HostParams& host_params);
         void schedule_plugin_instructions(const PluginResult& result, const plugins::manifest::HostParams& host_params);
         void schedule_exit_orders(const plugins::manifest::HostParams& host_params);
         [[nodiscard]] const BackTestReport& get_report();
