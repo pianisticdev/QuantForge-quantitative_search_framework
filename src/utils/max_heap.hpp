@@ -8,8 +8,8 @@ namespace data_structures {
     template <typename T>
     class MaxHeap {
        public:
-        MaxHeap();
-        ~MaxHeap();
+        MaxHeap() = default;
+        ~MaxHeap() = default;
         MaxHeap(const MaxHeap&) = delete;
         MaxHeap& operator=(const MaxHeap&) = delete;
         MaxHeap(MaxHeap&&) = delete;
@@ -48,7 +48,7 @@ namespace data_structures {
         void bubble_up(size_t idx) {
             while (idx > 0) {
                 size_t parent_idx = (idx - 1) / 2;
-                if (data_[idx] < data_[parent_idx]) {
+                if (data_[idx] > data_[parent_idx]) {
                     std::swap(data_[idx], data_[parent_idx]);
                     idx = parent_idx;
                 } else {
@@ -63,22 +63,22 @@ namespace data_structures {
             while (true) {
                 size_t left_child_idx = 2 * idx + 1;
                 size_t right_child_idx = 2 * idx + 2;
-                size_t smallest_idx = idx;
+                size_t largest_idx = idx;
 
-                if (left_child_idx < size && data_[left_child_idx] < data_[smallest_idx]) {
-                    smallest_idx = left_child_idx;
+                if (left_child_idx < size && data_[left_child_idx] > data_[largest_idx]) {
+                    largest_idx = left_child_idx;
                 }
 
-                if (right_child_idx < size && data_[right_child_idx] < data_[smallest_idx]) {
-                    smallest_idx = right_child_idx;
+                if (right_child_idx < size && data_[right_child_idx] > data_[largest_idx]) {
+                    largest_idx = right_child_idx;
                 }
 
-                if (smallest_idx == idx) {
+                if (largest_idx == idx) {
                     break;
                 }
 
-                std::swap(data_[idx], data_[smallest_idx]);
-                idx = smallest_idx;
+                std::swap(data_[idx], data_[largest_idx]);
+                idx = largest_idx;
             }
         }
 

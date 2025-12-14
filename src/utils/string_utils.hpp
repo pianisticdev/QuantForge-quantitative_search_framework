@@ -20,6 +20,8 @@ namespace string_utils {
     std::filesystem::path append_to_path(const std::filesystem::path& path, const std::string& str);
 
     std::vector<std::string> split_comma_delimited_string(std::string_view sv);
+
+    std::string create_uuid();
 }  // namespace string_utils
 
 #endif

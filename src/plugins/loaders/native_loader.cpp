@@ -84,7 +84,7 @@ namespace plugins::loaders {
             return PluginResult{1, "Undefined Method on_bar", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
-        Bar plugin_bar = plugins::loaders::to_plugin_bar(bar);
+        CBar plugin_bar = plugins::loaders::to_plugin_bar(bar);
         CState c_state = models::BackTestState::to_c_state(state);
         return exp_.vtable_.on_bar(exp_.instance_, &plugin_bar, &c_state);
     }

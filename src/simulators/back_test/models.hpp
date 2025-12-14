@@ -6,9 +6,11 @@
 #include <chrono>
 #include <map>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "../../utils/money_utils.hpp"
+#include "../../utils/string_utils.hpp"
 #include "../plugins/abi/abi.h"
 
 using namespace money_utils;
@@ -16,103 +18,128 @@ using namespace money_utils;
 namespace models {
     constexpr int64_t NULL_MARKET_TRIGGER_PRICE = INT64_MIN;
 
-    struct Instruction {
+    struct Signal {
+        int64_t created_at_ns_ = std::chrono::system_clock::now().time_since_epoch().count();
         std::string symbol_;
         std::string action_;
+
+        [[nodiscard]] bool is_buy() const { return this->action_ == constants::BUY; }
+        [[nodiscard]] bool is_sell() const { return this->action_ == constants::SELL; }
+
+        explicit Signal(const CSignal& inst) : symbol_(inst.symbol_), action_(inst.action_) {}
+        Signal(std::string symbol, std::string action) : symbol_(std::move(symbol)), action_(std::move(action)) {}
+    };
+
+    struct Order {
         double quantity_;
         int64_t created_at_ns_ = std::chrono::system_clock::now().time_since_epoch().count();
-        int64_t filled_at_ns_ = 0;
-
-        std::optional<std::string> order_type_;  // Market / Limit /
+        std::string symbol_;
+        std::string action_;
+        std::string order_type_;
         std::optional<Money> limit_price_;
         std::optional<Money> stop_loss_price_;
         std::optional<Money> take_profit_price_;
 
-        explicit Instruction(const CInstruction& inst)
-            : symbol_(inst.symbol_ != nullptr ? inst.symbol_ : ""),
-              action_(inst.action_ != nullptr ? inst.action_ : ""),
-              quantity_(inst.quantity_),
-              order_type_(inst.order_type_ != nullptr ? inst.order_type_ : ""),
-              limit_price_(inst.limit_price_),
-              stop_loss_price_(inst.stop_loss_price_ != NULL_MARKET_TRIGGER_PRICE ? std::make_optional(inst.stop_loss_price_) : std::nullopt),
-              take_profit_price_(inst.take_profit_price_ != NULL_MARKET_TRIGGER_PRICE ? std::make_optional(inst.take_profit_price_) : std::nullopt) {}
-        Instruction(std::string symbol, double quantity, std::string action) : symbol_(std::move(symbol)), action_(std::move(action)), quantity_(quantity) {}
-
-        [[nodiscard]] static std::vector<Instruction> to_instructions(const PluginResult& result) {
-            std::vector<Instruction> vec;
-            vec.reserve(result.instructions_count_);
-            for (size_t i = 0; i < result.instructions_count_; ++i) {
-                vec.emplace_back(result.instructions_[i]);
-            }
-            return vec;
-        }
-
-        [[nodiscard]] bool is_signal() const { return !this->order_type_.has_value(); }
-        [[nodiscard]] bool is_order() const { return this->order_type_.has_value(); }
-        [[nodiscard]] bool is_limit_order() const { return this->order_type_.has_value() && this->order_type_.value() == constants::LIMIT; }
-        [[nodiscard]] bool is_stop_loss_order() const { return this->order_type_.has_value() && this->order_type_.value() == constants::STOP_LOSS; }
         [[nodiscard]] bool is_buy() const { return this->action_ == constants::BUY; }
         [[nodiscard]] bool is_sell() const { return this->action_ == constants::SELL; }
 
-        bool operator<(const Instruction& other) const { return filled_at_ns_ < other.filled_at_ns_; }
+        explicit Order(const COrder& inst)
+            : quantity_(inst.quantity_),
+              symbol_(inst.symbol_),
+              action_(inst.action_),
+              order_type_(inst.order_type_),
+              limit_price_(Money(inst.limit_price_)),
+              stop_loss_price_(Money(inst.stop_loss_price_)),
+              take_profit_price_(Money(inst.take_profit_price_)) {}
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        Order(double quantity, int64_t created_at_ns, std::string symbol, std::string action, std::string order_type, std::optional<Money> limit_price,
+              std::optional<Money> stop_loss_price, std::optional<Money> take_profit_price)
+            : quantity_(quantity),
+              created_at_ns_(created_at_ns),
+              symbol_(std::move(symbol)),
+              action_(std::move(action)),
+              order_type_(std::move(order_type)),
+              limit_price_(limit_price),
+              stop_loss_price_(stop_loss_price),
+              take_profit_price_(take_profit_price) {}
     };
+
+    using Instruction = std::variant<Signal, Order>;
+
+    struct Fill {
+        double quantity_;
+        int64_t created_at_ns_;
+        Money price_;
+        std::string symbol_;
+        std::string uuid_;
+        std::string action_;
+
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        Fill(std::string symbol, std::string action, double quantity, Money price, int64_t created_at_ns)
+            : quantity_(quantity),
+              created_at_ns_(created_at_ns),
+              price_(price),
+              symbol_(std::move(symbol)),
+              uuid_(string_utils::create_uuid()),
+              action_(std::move(action)) {}
+    };
+
+    struct StopLossExitOrder {
+        bool is_triggered_ = false;
+        double trigger_quantity_;
+        Money stop_loss_price_;
+        Money price_;
+        int64_t created_at_ns_;
+        std::string symbol_;
+        std::string fill_uuid_;
+
+        bool operator<(const StopLossExitOrder& other) const { return stop_loss_price_ < other.stop_loss_price_; }
+
+        [[nodiscard]] Order to_sell_instruction() const {
+            return {trigger_quantity_, created_at_ns_, symbol_, constants::SELL, "market", std::nullopt, std::nullopt, std::nullopt};
+        }
+
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        StopLossExitOrder(std::string symbol, double quantity, Money stop_loss_price, Money price, int64_t created_at_ns)
+            : trigger_quantity_(quantity),
+              stop_loss_price_(stop_loss_price.to_abi_int64()),
+              price_(price.to_abi_int64()),
+              created_at_ns_(created_at_ns),
+              symbol_(std::move(symbol)),
+              fill_uuid_(string_utils::create_uuid()) {}
+    };
+
+    struct TakeProfitExitOrder {
+        bool is_triggered_ = false;
+        double trigger_quantity_;
+        Money take_profit_price_;
+        Money price_;
+        int64_t created_at_ns_;
+        std::string symbol_;
+        std::string fill_uuid_;
+
+        bool operator<(const TakeProfitExitOrder& other) const { return take_profit_price_ > other.take_profit_price_; }
+
+        [[nodiscard]] Order to_sell_instruction() const {
+            return {trigger_quantity_, created_at_ns_, symbol_, constants::SELL, "market", std::nullopt, std::nullopt, std::nullopt};
+        }
+
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        TakeProfitExitOrder(std::string symbol, double quantity, Money take_profit_price, Money price, int64_t created_at_ns)
+            : trigger_quantity_(quantity),
+              take_profit_price_(take_profit_price.to_abi_int64()),
+              price_(price.to_abi_int64()),
+              created_at_ns_(created_at_ns),
+              symbol_(std::move(symbol)),
+              fill_uuid_(string_utils::create_uuid()) {}
+    };
+
+    using ExitOrder = std::variant<StopLossExitOrder, TakeProfitExitOrder>;
 
     struct Position {
         std::string symbol_;
         double quantity_;
         Money average_price_;
-
-        [[nodiscard]] static std::vector<CPosition> to_c_positions(const std::map<std::string, Position>& positions) {
-            std::vector<CPosition> c_positions;
-            c_positions.reserve(positions.size());
-            for (const auto& [symbol, position] : positions) {
-                c_positions.emplace_back(CPosition{
-                    .symbol_ = symbol.c_str(),
-                    .quantity_ = position.quantity_,
-                    .average_price_ = position.average_price_.to_abi_double(),
-                });
-            }
-            return c_positions;
-        }
-    };
-
-    struct Trade {
-        bool is_market_sell_triggered_ = false;
-        double quantity_;
-        Money price_;
-        int64_t timestamp_ns_;
-        std::string symbol_;
-        std::optional<Money> stop_loss_price_;
-        std::optional<Money> take_profit_price_;
-
-        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        Trade(std::string symbol, double quantity, Money price, int64_t timestamp_ns, std::optional<Money> stop_loss_price,
-              std::optional<Money> take_profit_price)
-            : quantity_(quantity),
-              price_(price),
-              timestamp_ns_(timestamp_ns),
-              symbol_(std::move(symbol)),
-              stop_loss_price_(stop_loss_price),
-              take_profit_price_(take_profit_price) {}
-
-        [[nodiscard]] static std::vector<CTrade> to_c_trades(const std::vector<Trade>& trades) {
-            std::vector<CTrade> c_trades;
-            c_trades.reserve(trades.size());
-            for (const auto& trade : trades) {
-                c_trades.emplace_back(CTrade{
-                    .symbol_ = trade.symbol_.c_str(),
-                    .quantity_ = trade.quantity_,
-                    .price_ = trade.price_.to_abi_int64(),
-                    .timestamp_ns_ = trade.timestamp_ns_,
-                    .stop_loss_price_ = trade.stop_loss_price_.value_or(Money(NULL_MARKET_TRIGGER_PRICE)).to_abi_int64(),
-                    .take_profit_price_ = trade.take_profit_price_.value_or(Money(NULL_MARKET_TRIGGER_PRICE)).to_abi_int64(),
-                    .is_market_sell_triggered_ = trade.is_market_sell_triggered_,
-                });
-            }
-            return c_trades;
-        }
-
-        [[nodiscard]] Instruction to_sell_instruction() const { return {this->symbol_, this->quantity_, constants::SELL}; }
     };
 
     // We calculate the rolling windows once per day
@@ -135,54 +162,52 @@ namespace models {
         double value_at_risk_rolling_;
         double conditional_value_at_risk_;
         double conditional_value_at_risk_rolling_;
-
-        [[nodiscard]] static std::vector<CEquitySnapshot> to_c_equity_snapshots(const std::vector<EquitySnapshot>& equity_snapshots) {
-            std::vector<CEquitySnapshot> c_equity_snapshots;
-            c_equity_snapshots.reserve(equity_snapshots.size());
-            for (const auto& equity_snapshot : equity_snapshots) {
-                c_equity_snapshots.emplace_back(CEquitySnapshot{
-                    .timestamp_ns_ = equity_snapshot.timestamp_ns_,
-                    .equity_ = equity_snapshot.equity_.to_abi_int64(),
-                    .return_ = equity_snapshot.return_,
-                    .max_drawdown_ = equity_snapshot.max_drawdown_,
-                    .sharpe_ratio_ = equity_snapshot.sharpe_ratio_,
-                    .sortino_ratio_ = equity_snapshot.sortino_ratio_,
-                    .calmar_ratio_ = equity_snapshot.calmar_ratio_,
-                    .tail_ratio_ = equity_snapshot.tail_ratio_,
-                    .value_at_risk_ = equity_snapshot.value_at_risk_,
-                    .conditional_value_at_risk_ = equity_snapshot.conditional_value_at_risk_,
-                });
-            }
-            return c_equity_snapshots;
-        }
     };
 
     struct BackTestState {
         Money cash_;
+        int64_t current_timestamp_ns_;
         std::map<std::string, Position> positions_;
         std::map<std::string, Money> current_prices_;
         std::map<std::string, int64_t> current_volumes_;
-        int64_t current_timestamp_ns_;
-        std::vector<Trade> trade_history_;
+        std::vector<Fill> fills_;
+        std::vector<ExitOrder> exit_orders_;
         std::vector<EquitySnapshot> equity_curve_;
+    };
 
-        mutable std::vector<CPosition> c_positions_cache_;
-        mutable std::vector<CTrade> c_trades_cache_;
-        mutable std::vector<CEquitySnapshot> c_equity_cache_;
+    struct ExecutionResult {
+        bool success_;
+        std::string message_;
+        std::optional<Money> cash_delta_;
+        std::optional<models::Position> position_;
+        std::optional<models::Fill> fill_;
+        std::optional<models::ExitOrder> exit_order_;
+        std::optional<models::Order> partial_order_;
 
-        [[nodiscard]] static CState to_c_state(BackTestState& state) {
-            state.c_positions_cache_ = Position::to_c_positions(state.positions_);
-            state.c_trades_cache_ = Trade::to_c_trades(state.trade_history_);
-            state.c_equity_cache_ = EquitySnapshot::to_c_equity_snapshots(state.equity_curve_);
+        [[nodiscard]] bool is_filled() const { return partial_order_ == std::nullopt; }
 
-            return CState{.cash_ = state.cash_.to_abi_int64(),
-                          .positions_ = state.c_positions_cache_.data(),
-                          .positions_count_ = state.c_positions_cache_.size(),
-                          .trade_history_ = state.c_trades_cache_.data(),
-                          .trade_history_count_ = state.c_trades_cache_.size(),
-                          .equity_curve_ = state.c_equity_cache_.data(),
-                          .equity_curve_count_ = state.c_equity_cache_.size()};
-        }
+        // Error Case Constructor
+        ExecutionResult(std::string message) : success_(false), message_(std::move(message)) {}
+
+        // Success Case Constructor
+        ExecutionResult(bool success, std::string message, Money cash_delta, std::optional<models::Order> partial_order, models::Position position,
+                        models::Fill fill, std::optional<models::ExitOrder> exit_order)
+            : success_(success),
+              message_(std::move(message)),
+              cash_delta_(cash_delta),
+              position_(std::move(position)),
+              fill_(std::move(fill)),
+              exit_order_(std::move(exit_order)),
+              partial_order_(std::move(partial_order)) {}
+    };
+
+    struct ScheduledOrder {
+        Order order_;
+        int64_t scheduled_fill_at_ns_ = 0;
+
+        ScheduledOrder(Order order, int64_t scheduled_fill_at_ns) : order_(std::move(order)), scheduled_fill_at_ns_(scheduled_fill_at_ns) {}
+
+        bool operator<(const ScheduledOrder& other) const { return scheduled_fill_at_ns_ < other.scheduled_fill_at_ns_; }
     };
 }  // namespace models
 

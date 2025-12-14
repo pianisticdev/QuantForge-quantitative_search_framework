@@ -4,6 +4,9 @@
 
 #include "string_utils.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -58,5 +61,10 @@ namespace string_utils {
             start = pos + 1;
         }
         return out;
+    }
+
+    std::string create_uuid() {
+        boost::uuids::random_generator gen;
+        return to_string(gen());
     }
 }  // namespace string_utils

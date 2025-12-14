@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(CURL REQUIRED)
 find_package(simdjson CONFIG REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 # HTTP
 add_subdirectory(src/http/model)

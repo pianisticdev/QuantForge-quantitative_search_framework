@@ -10,8 +10,8 @@
 
 namespace plugins::loaders {
 
-    inline Bar to_plugin_bar(const http::stock_api::AggregateBarResult& bar) {
-        return Bar{
+    inline CBar to_plugin_bar(const http::stock_api::AggregateBarResult& bar) {
+        return CBar{
             .unix_ts_ns_ = bar.unix_ts_ns_,
             .open_ = bar.open_,
             .high_ = bar.high_,
@@ -22,7 +22,7 @@ namespace plugins::loaders {
         };
     }
 
-    inline http::stock_api::AggregateBarResult to_http_bar(const Bar& bar) {
+    inline http::stock_api::AggregateBarResult to_http_bar(const CBar& bar) {
         return http::stock_api::AggregateBarResult{
             .unix_ts_ns_ = bar.unix_ts_ns_,
             .open_ = bar.open_,

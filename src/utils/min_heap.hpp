@@ -8,8 +8,8 @@ namespace data_structures {
     template <typename T>
     class MinHeap {
        public:
-        MinHeap();
-        ~MinHeap();
+        MinHeap() = default;
+        ~MinHeap() = default;
         MinHeap(const MinHeap&) = delete;
         MinHeap& operator=(const MinHeap&) = delete;
         MinHeap(MinHeap&&) = delete;

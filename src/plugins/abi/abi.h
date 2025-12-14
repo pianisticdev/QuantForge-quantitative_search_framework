@@ -10,15 +10,48 @@ extern "C" {
 
 #define PLUGIN_API_VERSION 1
 
-typedef struct CTrade {
-    bool is_market_sell_triggered_;
+typedef enum CExitOrderType {
+    EXIT_ORDER_STOP_LOSS = 0,
+    EXIT_ORDER_TAKE_PROFIT = 1,
+} CExitOrderType;
+
+typedef struct CFill {
     double quantity_;
     int64_t price_;
-    int64_t timestamp_ns_;
-    int64_t stop_loss_price_;
-    int64_t take_profit_price_;
+    int64_t created_at_ns_;
     const char* symbol_;
-} CTrade;
+    const char* uuid_;
+    const char* action_;
+} CFill;
+
+typedef struct CStopLossExitOrder {
+    bool is_triggered_;
+    double trigger_quantity_;
+    int64_t stop_loss_price_;
+    int64_t price_;
+    int64_t created_at_ns_;
+    const char* symbol_;
+    const char* fill_uuid_;
+} CStopLossExitOrder;
+
+typedef struct CTakeProfitExitOrder {
+    bool is_triggered_;
+    double trigger_quantity_;
+    int64_t take_profit_price_;
+    int64_t price_;
+    int64_t created_at_ns_;
+    const char* symbol_;
+    const char* fill_uuid_;
+} CTakeProfitExitOrder;
+
+typedef struct CExitOrder {
+    CExitOrderType type_;
+
+    union {
+        CStopLossExitOrder stop_loss_;
+        CTakeProfitExitOrder take_profit_;
+    } data_;
+} CExitOrder;
 
 typedef struct CPosition {
     const char* symbol_;
@@ -26,15 +59,35 @@ typedef struct CPosition {
     double average_price_;
 } CPosition;
 
-typedef struct CInstruction {
+typedef enum CInstructionType {
+    INSTRUCTION_TYPE_SIGNAL = 0,
+    INSTRUCTION_TYPE_ORDER = 1,
+} CInstructionType;
+
+typedef struct CSignal {
+    const char* symbol_;
+    const char* action_;
+} CSignal;
+
+typedef struct COrder {
     const char* symbol_;
     const char* action_;
     double quantity_;
 
-    const char* order_type_;
     int64_t limit_price_;
     int64_t stop_loss_price_;
     int64_t take_profit_price_;
+
+    const char* order_type_;
+} CLimitOrder;
+
+typedef struct CInstruction {
+    CInstructionType type_;
+
+    union {
+        CSignal signal_;
+        COrder order_;
+    } data_;
 } CInstruction;
 
 typedef struct CEquitySnapshot {
@@ -54,13 +107,15 @@ typedef struct CState {
     int64_t cash_;
     const CPosition* positions_;
     size_t positions_count_;
-    const CTrade* trade_history_;
-    size_t trade_history_count_;
+    const CExitOrder* new_exit_orders_;
+    size_t new_exit_orders_count_;
+    const CFill* new_fills_;
+    size_t new_fills_count_;
     const CEquitySnapshot* equity_curve_;
     size_t equity_curve_count_;
 } CState;
 
-typedef struct Bar {
+typedef struct CBar {
     const char* symbol_;
     int64_t unix_ts_ns_;
     double open_;

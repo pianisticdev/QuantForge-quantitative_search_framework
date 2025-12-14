@@ -54,7 +54,7 @@ namespace plugins::loaders {
                 return PythonLoader::to_plugin_result(python_plugin, py_result);
             };
 
-            pp->vtable_.on_bar = [](void* self, const Bar* bar, const CState* state) -> PluginResult {
+            pp->vtable_.on_bar = [](void* self, const CBar* bar, const CState* state) -> PluginResult {
                 auto& python_plugin = *static_cast<PyPlugin*>(self);
 
                 py::dict state_dict;
@@ -70,16 +70,16 @@ namespace plugins::loaders {
                 }
                 state_dict["positions"] = positions_list;
 
-                py::list trade_history_list;
+                py::list fills_list;
                 for (size_t i = 0; i < state->trade_history_count_; ++i) {
-                    py::dict trade;
-                    trade["symbol"] = state->trade_history_[i].symbol_;
-                    trade["quantity"] = state->trade_history_[i].quantity_;
-                    trade["price"] = state->trade_history_[i].price_;
-                    trade["timestamp_ns"] = state->trade_history_[i].timestamp_ns_;
-                    trade_history_list.append(trade);
+                    py::dict fill;
+                    fill["symbol"] = state->trade_history_[i].symbol_;
+                    fill["quantity"] = state->trade_history_[i].quantity_;
+                    fill["price"] = state->trade_history_[i].price_;
+                    fill["timestamp_ns"] = state->trade_history_[i].timestamp_ns_;
+                    fills_list.append(fill);
                 }
-                state_dict["trade_history"] = trade_history_list;
+                state_dict["fills"] = fills_list;
 
                 py::list equity_curve_list;
                 for (size_t i = 0; i < state->equity_curve_count_; ++i) {
@@ -158,7 +158,7 @@ namespace plugins::loaders {
             return PluginResult{1, "Undefined Method on_bar", .instructions_count_ = 0, .instructions_ = nullptr};
         }
 
-        Bar plugin_bar = plugins::loaders::to_plugin_bar(bar);
+        CBar plugin_bar = plugins::loaders::to_plugin_bar(bar);
         CState c_state = models::BackTestState::to_c_state(state);
         return exp_.vtable_.on_bar(exp_.instance_, &plugin_bar, &c_state);
     }
