@@ -5,7 +5,7 @@
 #include "./models.hpp"
 
 namespace simulators {
-    void State::update_state(const models::ExecutionResultSucess& execution_result, const plugins::manifest::HostParams& host_params) {
+    void State::update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params) {
         cash_ += execution_result.cash_delta_;
 
         positions_[execution_result.position_.symbol_] = execution_result.position_;

@@ -90,7 +90,7 @@ namespace simulators {
                     throw std::runtime_error("Execution failed: " + arg.message_);
                 }
 
-                if constexpr (std::is_same_v<T, models::ExecutionResultSucess>) {
+                if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
                     if (arg.has_exit_strategy()) {
                         models::ExitOrder exit_order = arg.exit_order_.value();
                         exit_order_book_.add_exit_order(exit_order);
@@ -157,7 +157,7 @@ namespace simulators {
                     throw std::runtime_error("Execution failed: " + arg.message_);
                 }
 
-                if constexpr (std::is_same_v<T, models::ExecutionResultSucess>) {
+                if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
                     state_.update_state(arg, host_params);
                 }
             },

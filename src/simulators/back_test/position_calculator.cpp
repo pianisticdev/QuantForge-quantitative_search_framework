@@ -83,21 +83,25 @@ namespace simulators {
     }
 
     models::Position PositionCalculator::calculate_position(const models::Order& order, double fillable_quantity, const simulators::State& state) {
-        models::Position position = state.positions_.at(order.symbol_);
-        position.symbol_ = order.symbol_;
+        auto position = [&, state]() -> models::Position {
+            auto it = state.positions_.find(order.symbol_);
+            if (it != state.positions_.end()) {
+                return it->second;
+            }
+
+            return {order.symbol_, 0.0, Money(0)};
+        }();
+
+        double old_quantity = position.quantity_;
+        Money fill_price = state.current_prices_.at(order.symbol_);
+
         if (order.action_ == constants::BUY) {
             position.quantity_ += fillable_quantity;
+            position.average_price_ = ((position.average_price_ * old_quantity) + (fill_price * fillable_quantity)) / position.quantity_;
         } else if (order.action_ == constants::SELL) {
             position.quantity_ -= fillable_quantity;
         }
-        std::vector<models::Fill> fills_for_symbol;
-        for (const auto& existing_fill : state.fills_) {
-            if (existing_fill.symbol_ == order.symbol_) {
-                fills_for_symbol.emplace_back(existing_fill);
-            }
-        }
-        position.average_price_ = ((position.average_price_ * position.quantity_) + (state.current_prices_.at(order.symbol_) * fillable_quantity)) /
-                                  (position.quantity_ + fillable_quantity);
+
         return position;
     }
 

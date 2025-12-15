@@ -19,7 +19,7 @@ namespace simulators {
         std::vector<models::ExitOrder> exit_orders_;
         std::vector<models::EquitySnapshot> equity_curve_;
 
-        void update_state(const models::ExecutionResultSucess& execution_result, const plugins::manifest::HostParams& host_params);
+        void update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params);
     };
 
 }  // namespace simulators

@@ -71,10 +71,10 @@ namespace simulators {
             models::Order partial_order = order;
             partial_order.quantity_ = remaining_quantity;
             partial_order.created_at_ns_ = state.current_timestamp_ns_;
-            return models::ExecutionResultSucess(cash_delta, std::make_optional(partial_order), position, fill, exit_order);
+            return models::ExecutionResultSuccess(cash_delta, std::make_optional(partial_order), position, fill, exit_order);
         }
 
-        return models::ExecutionResultSucess(cash_delta, std::nullopt, position, fill, exit_order);
+        return models::ExecutionResultSuccess(cash_delta, std::nullopt, position, fill, exit_order);
     }
 
     models::Order Executor::signal_to_order(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {

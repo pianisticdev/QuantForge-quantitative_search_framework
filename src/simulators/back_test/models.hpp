@@ -164,7 +164,7 @@ namespace models {
         double conditional_value_at_risk_rolling_;
     };
 
-    struct ExecutionResultSucess {
+    struct ExecutionResultSuccess {
         std::string message_;
         Money cash_delta_;
         models::Position position_;
@@ -173,8 +173,8 @@ namespace models {
         std::optional<models::Order> partial_order_;
 
         // Success Case Constructor
-        ExecutionResultSucess(Money cash_delta, std::optional<models::Order> partial_order, models::Position position, models::Fill fill,
-                              std::optional<models::ExitOrder> exit_order)
+        ExecutionResultSuccess(Money cash_delta, std::optional<models::Order> partial_order, models::Position position, models::Fill fill,
+                               std::optional<models::ExitOrder> exit_order)
             : message_(partial_order.has_value() ? "Partial fill" : "Complete fill"),
               cash_delta_(cash_delta),
               position_(std::move(position)),
@@ -192,7 +192,7 @@ namespace models {
         ExecutionResultError(std::string message) : message_(std::move(message)) {}
     };
 
-    using ExecutionResult = std::variant<ExecutionResultSucess, ExecutionResultError>;
+    using ExecutionResult = std::variant<ExecutionResultSuccess, ExecutionResultError>;
 
     struct ScheduledOrder {
         Order order_;

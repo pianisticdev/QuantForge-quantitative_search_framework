@@ -3,7 +3,7 @@ add_library(
   STATIC
     abi_converter.cpp
     back_test_engine.cpp
-    back_test_state.cpp
+    state.cpp
     equity_calculator.cpp
     exchange.cpp
     executor.cpp
