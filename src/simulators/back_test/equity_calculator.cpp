@@ -17,13 +17,13 @@ namespace simulators {
         return net_return.to_dollars() / initial_capital_money.to_dollars();
     }
 
-    double EquityCalculator::calculate_max_drawdown(const simulators::State& state, Money equity) {
-        Money peak_equity = equity;
-        for (const auto& equity_snapshot : state.equity_curve_) {
-            if (equity_snapshot.equity_ > peak_equity) {
-                peak_equity = equity_snapshot.equity_;
-            }
+    double EquityCalculator::calculate_max_drawdown(const simulators::State& state, Money current_equity) {
+        double current_drawdown = 0.0;
+
+        if (state.peak_equity_.to_dollars() > 0) {
+            current_drawdown = (state.peak_equity_ - current_equity).to_dollars() / state.peak_equity_.to_dollars();
         }
-        return (peak_equity - equity).to_dollars() / peak_equity.to_dollars();
+
+        return std::max(current_drawdown, state.max_drawdown_);
     }
 }  // namespace simulators

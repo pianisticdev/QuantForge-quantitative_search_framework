@@ -14,7 +14,7 @@ namespace simulators {
         }
 
         if (host_params.slippage_model_.value() == "time_based") {
-            int64_t base_delay_ns = static_cast<int64_t>(host_params.slippage_.value_or(0.0) * constants::MONEY_SCALED_BASE);
+            int64_t base_delay_ns = static_cast<int64_t>(host_params.slippage_.value_or(0.0) * constants::NANOSECONDS_PER_MILLISECOND);
             return base_delay_ns;
         }
 
@@ -24,7 +24,7 @@ namespace simulators {
             const double size_ratio = static_cast<double>(volume_value) / order_value.to_dollars();
 
             const double delay_seconds = host_params.slippage_.value_or(1.0) * size_ratio;
-            return static_cast<int64_t>(delay_seconds * constants::MONEY_SCALED_BASE);
+            return static_cast<int64_t>(delay_seconds * constants::NANOSECONDS_PER_MILLISECOND);
         }
 
         return 0;

@@ -6,6 +6,12 @@
 #include "./models.hpp"
 
 namespace simulators {
+    void State::prepare_initial_state(const plugins::manifest::HostParams& host_params) {
+        cash_ = Money(host_params.initial_capital_);
+        peak_equity_ = Money(host_params.initial_capital_);
+        max_drawdown_ = 0.0;
+    }
+
     void State::update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params) {
         cash_ += execution_result.cash_delta_;
 
@@ -34,12 +40,21 @@ namespace simulators {
 
         auto equity = EquityCalculator::calculate_equity(*this);
 
+        if (equity > peak_equity_) {
+            peak_equity_ = equity;
+        }
+
+        double current_drawdown = EquityCalculator::calculate_max_drawdown(*this, equity);
+        if (current_drawdown > max_drawdown_) {
+            max_drawdown_ = current_drawdown;
+        }
+
         // We need a configurable rolling window, and a configurable risk free rate (0.02 default)
         equity_curve_.emplace_back(models::EquitySnapshot{
             .timestamp_ns_ = execution_result.fill_.created_at_ns_,
             .equity_ = equity,
             .return_ = EquityCalculator::calculate_return(host_params, equity),
-            .max_drawdown_ = EquityCalculator::calculate_max_drawdown(*this, equity),
+            .max_drawdown_ = max_drawdown_,
             .sharpe_ratio_ = 0,
             .sharpe_ratio_rolling_ = 0,
             .sortino_ratio_ = 0,

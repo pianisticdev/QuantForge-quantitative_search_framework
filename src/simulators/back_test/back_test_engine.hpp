@@ -49,6 +49,8 @@ namespace simulators {
             .fills_ = {},
             .exit_orders_ = {},
             .equity_curve_ = {},
+            .peak_equity_ = Money(0),
+            .max_drawdown_ = 0.0,
         };
         data_structures::MinHeap<models::ScheduledOrder> order_book_;
         ExitOrderBook exit_order_book_;

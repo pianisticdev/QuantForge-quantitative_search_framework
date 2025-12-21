@@ -37,12 +37,12 @@ namespace simulators {
             models::StopLossExitOrder exit_order = top_trade_opt.value();
 
             if (exit_order.stop_loss_price_ < state.current_prices_.at(exit_order.symbol_)) {
-                break;
+                break;  // Exit early
             }
 
             stop_loss_heap_.pop();
 
-            callback(exit_order);
+            callback(exit_order);  // Process the exit order
         }
     }
 
@@ -62,12 +62,12 @@ namespace simulators {
             auto exit_order = top_trade_opt.value();
 
             if (exit_order.take_profit_price_ > state.current_prices_.at(exit_order.symbol_)) {
-                break;
+                break;  // Exit early
             }
 
             take_profit_heap_.pop();
 
-            callback(exit_order);
+            callback(exit_order);  // Process the exit order
         }
     }
 

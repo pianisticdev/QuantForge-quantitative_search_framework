@@ -24,9 +24,21 @@ namespace simulators {
 
     models::ExecutionResult Executor::execute_order(const models::Order& order, const plugins::manifest::HostParams& host_params,
                                                     const simulators::State& state) {
+        if (order.quantity_ <= 0) {
+            return models::ExecutionResultError("Order quantity must be positive");
+        }
+
+        if (state.current_prices_.find(order.symbol_) == state.current_prices_.end()) {
+            return models::ExecutionResultError("No price data for symbol: " + order.symbol_);
+        }
+
+        if (state.current_volumes_.find(order.symbol_) == state.current_volumes_.end()) {
+            return models::ExecutionResultError("No volume data for symbol: " + order.symbol_);
+        }
+
         auto [fillable_quantity, remaining_quantity] = Executor::get_fillable_and_remaining_quantities(order, host_params, state);
 
-        if (!host_params.allow_fractional_shares_.has_value()) {
+        if (!host_params.allow_fractional_shares_.value_or(false)) {
             fillable_quantity = std::floor(fillable_quantity);
             if (fillable_quantity <= 0) {
                 return models::ExecutionResultError("Order quantity is too small to execute");

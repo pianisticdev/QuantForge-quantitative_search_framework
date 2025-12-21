@@ -23,7 +23,7 @@ namespace simulators {
     void BackTestEngine::run() {
         const auto& host_params = plugin_->get_host_params();
 
-        state_.cash_ = Money(host_params.initial_capital_);
+        state_.prepare_initial_state(host_params);
 
         auto iterable_plugin_data = data_store_->get_iterable_plugin_data(plugin_->get_plugin_name());
 

@@ -22,6 +22,10 @@ namespace simulators {
         std::vector<models::Fill> new_fills_;
         std::vector<models::ExitOrder> new_exit_orders_;
         std::map<std::string, double> active_buy_fills_;
+        Money peak_equity_;
+        double max_drawdown_;
+
+        void prepare_initial_state(const plugins::manifest::HostParams& host_params);
 
         void update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params);
 
