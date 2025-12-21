@@ -33,19 +33,27 @@ namespace simulators {
             }
         }
 
-        if (fillable_quantity > state.positions_.at(order.symbol_).quantity_ && order.action_ == constants::SELL) {
-            return models::ExecutionResultError("Insufficient position size for trade and commission");
+        if (order.is_sell()) {
+            auto pos_it = state.positions_.find(order.symbol_);
+            if (pos_it == state.positions_.end()) {
+                return models::ExecutionResultError("Cannot sell " + order.symbol_ + ": no position exists");
+            }
+            if (fillable_quantity > pos_it->second.quantity_) {
+                return models::ExecutionResultError("Insufficient position size for " + order.symbol_ + ": trying to sell " +
+                                                    std::to_string(fillable_quantity) + " but only have " + std::to_string(pos_it->second.quantity_));
+            }
         }
 
         models::Fill fill(order.symbol_, order.action_, fillable_quantity, state.current_prices_.at(order.symbol_), state.current_timestamp_ns_);
 
         auto exit_order = [&, state]() -> std::optional<models::ExitOrder> {
             if (order.stop_loss_price_.has_value()) {
-                return models::StopLossExitOrder(order.symbol_, fillable_quantity, order.stop_loss_price_.value(), fill.price_, state.current_timestamp_ns_);
+                return models::StopLossExitOrder(order.symbol_, fillable_quantity, order.stop_loss_price_.value(), fill.price_, state.current_timestamp_ns_,
+                                                 fill.uuid_);
             }
             if (order.take_profit_price_.has_value()) {
-                return models::TakeProfitExitOrder(order.symbol_, fillable_quantity, order.take_profit_price_.value(), fill.price_,
-                                                   state.current_timestamp_ns_);
+                return models::TakeProfitExitOrder(order.symbol_, fillable_quantity, order.take_profit_price_.value(), fill.price_, state.current_timestamp_ns_,
+                                                   fill.uuid_);
             }
             return std::nullopt;
         }();
@@ -54,11 +62,11 @@ namespace simulators {
 
         auto fill_value = fill.price_ * fillable_quantity;
         auto cash_delta = [&]() {
-            if (order.action_ == constants::BUY) {
+            if (order.is_buy()) {
                 return (fill_value + commission) * -1;
             }
 
-            if (order.action_ == constants::SELL) {
+            if (order.is_sell()) {
                 return fill_value - commission;
             }
 

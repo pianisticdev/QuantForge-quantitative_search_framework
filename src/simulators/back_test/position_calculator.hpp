@@ -26,6 +26,9 @@ namespace simulators {
                                                                                      const simulators::State& state);
 
         [[nodiscard]] static models::Position calculate_position(const models::Order& order, double fillable_quantity, const simulators::State& state);
+
+        [[nodiscard]] static std::vector<std::pair<std::string, double>> find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill,
+                                                                                                            const simulators::State& state);
     };
 
 }  // namespace simulators

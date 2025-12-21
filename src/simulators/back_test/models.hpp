@@ -82,6 +82,9 @@ namespace models {
               symbol_(std::move(symbol)),
               uuid_(string_utils::create_uuid()),
               action_(std::move(action)) {}
+
+        [[nodiscard]] bool is_buy() const { return action_ == constants::BUY; }
+        [[nodiscard]] bool is_sell() const { return action_ == constants::SELL; }
     };
 
     struct StopLossExitOrder {
@@ -100,13 +103,13 @@ namespace models {
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        StopLossExitOrder(std::string symbol, double quantity, Money stop_loss_price, Money price, int64_t created_at_ns)
+        StopLossExitOrder(std::string symbol, double quantity, Money stop_loss_price, Money price, int64_t created_at_ns, std::string fill_uuid)
             : trigger_quantity_(quantity),
               stop_loss_price_(stop_loss_price.to_abi_int64()),
               price_(price.to_abi_int64()),
               created_at_ns_(created_at_ns),
               symbol_(std::move(symbol)),
-              fill_uuid_(string_utils::create_uuid()) {}
+              fill_uuid_(std::move(fill_uuid)) {}
     };
 
     struct TakeProfitExitOrder {
@@ -125,13 +128,13 @@ namespace models {
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        TakeProfitExitOrder(std::string symbol, double quantity, Money take_profit_price, Money price, int64_t created_at_ns)
+        TakeProfitExitOrder(std::string symbol, double quantity, Money take_profit_price, Money price, int64_t created_at_ns, std::string fill_uuid)
             : trigger_quantity_(quantity),
               take_profit_price_(take_profit_price.to_abi_int64()),
               price_(price.to_abi_int64()),
               created_at_ns_(created_at_ns),
               symbol_(std::move(symbol)),
-              fill_uuid_(string_utils::create_uuid()) {}
+              fill_uuid_(std::move(fill_uuid)) {}
     };
 
     using ExitOrder = std::variant<StopLossExitOrder, TakeProfitExitOrder>;

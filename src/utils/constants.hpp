@@ -21,6 +21,7 @@ namespace constants {
     inline constexpr const char* SELL = "sell";
     inline constexpr std::array<int, 6> ROLLING_EQUITY_WINDOWS = {1, 7, 30, 90, 180, 365};
     inline constexpr double DEFAULT_POSITION_SIZE_VALUE = 0.01;
+    inline constexpr double EPSILON = 0.0001;
 
 }  // namespace constants
 

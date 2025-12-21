@@ -19,7 +19,7 @@ namespace simulators {
         void add_exit_order(const models::ExitOrder& order);
         void process_stop_loss_heap(const simulators::State& state, const std::function<void(const models::StopLossExitOrder&)>& callback);
         void process_take_profit_heap(const simulators::State& state, const std::function<void(const models::TakeProfitExitOrder&)>& callback);
-        // Fill out additional methods here
+        void reduce_exit_orders_by_fill_uuid(const std::string& fill_uuid, double quantity_sold);
     };
 
 }  // namespace simulators

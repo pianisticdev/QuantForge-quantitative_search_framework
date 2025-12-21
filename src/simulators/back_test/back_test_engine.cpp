@@ -10,6 +10,7 @@
 #include "./exchange.hpp"
 #include "./executor.hpp"
 #include "./models.hpp"
+#include "./position_calculator.hpp"
 #include "./state.hpp"
 
 using namespace money_utils;
@@ -31,17 +32,20 @@ namespace simulators {
                 return;
             }
 
+            state_.prepare_next_bar_state(bar);
+
+            execute_order_book(bar, host_params);
+            schedule_exit_orders(host_params);
+
             PluginResult result = plugin_->on_bar(bar, state_);
 
             if (result.code_ != 0) {
                 throw std::runtime_error("Plugin on_bar failed: " + std::string(result.message_));
             }
 
-            execute_order_book(bar, host_params);
-
             schedule_plugin_instructions(result, host_params);
 
-            schedule_exit_orders(host_params);
+            state_.clear_previous_bar_state();
         });
 
         const char* json_out = nullptr;
@@ -91,6 +95,13 @@ namespace simulators {
                 }
 
                 if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
+                    if (arg.fill_.is_sell()) {
+                        auto closed_fills = PositionCalculator::find_buy_fill_uuids_closed_by_sell(arg.fill_, state_);
+                        for (const auto& [fill_uuid, quantity] : closed_fills) {
+                            exit_order_book_.reduce_exit_orders_by_fill_uuid(fill_uuid, quantity);
+                        }
+                    }
+
                     if (arg.has_exit_strategy()) {
                         models::ExitOrder exit_order = arg.exit_order_.value();
                         exit_order_book_.add_exit_order(exit_order);

@@ -7,9 +7,9 @@
 namespace simulators {
     CState ABIConverter::transform(const simulators::State& state) {
         c_positions_cache_ = to_c_positions(state.positions_);
-        c_fills_cache_ = to_c_fills(state.fills_);
+        c_fills_cache_ = to_c_fills(state.new_fills_);
         c_equity_cache_ = to_c_equity_snapshots(state.equity_curve_);
-        c_exit_orders_cache_ = to_c_exit_orders(state.exit_orders_);
+        c_exit_orders_cache_ = to_c_exit_orders(state.new_exit_orders_);
 
         return CState{.cash_ = state.cash_.to_abi_int64(),
                       .positions_ = c_positions_cache_.data(),

@@ -48,11 +48,11 @@ namespace simulators {
             return std::nullopt;
         }
 
-        if (signal.action_ == constants::BUY) {
+        if (signal.is_buy()) {
             return current_price * (1.0 - host_params.stop_loss_pct_.value());
         }
 
-        if (signal.action_ == constants::SELL) {
+        if (signal.is_sell()) {
             return current_price * (1.0 + host_params.stop_loss_pct_.value());
         }
 
@@ -71,11 +71,11 @@ namespace simulators {
             return std::nullopt;
         }
 
-        if (signal.action_ == constants::BUY) {
+        if (signal.is_buy()) {
             return current_price * (1.0 + host_params.take_profit_pct_.value());
         }
 
-        if (signal.action_ == constants::SELL) {
+        if (signal.is_sell()) {
             return current_price * (1.0 - host_params.take_profit_pct_.value());
         }
 
@@ -95,10 +95,10 @@ namespace simulators {
         double old_quantity = position.quantity_;
         Money fill_price = state.current_prices_.at(order.symbol_);
 
-        if (order.action_ == constants::BUY) {
+        if (order.is_buy()) {
             position.quantity_ += fillable_quantity;
             position.average_price_ = ((position.average_price_ * old_quantity) + (fill_price * fillable_quantity)) / position.quantity_;
-        } else if (order.action_ == constants::SELL) {
+        } else if (order.is_sell()) {
             position.quantity_ -= fillable_quantity;
         }
 
@@ -107,6 +107,28 @@ namespace simulators {
         }
 
         return position;
+    }
+
+    std::vector<std::pair<std::string, double>> PositionCalculator::find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill,
+                                                                                                       const simulators::State& state) {
+        std::vector<std::pair<std::string, double>> closed_fills;
+
+        double remaining = sell_fill.quantity_;
+        for (const auto& existing_fill : state.fills_) {
+            if (remaining <= 0) {
+                break;
+            }
+
+            if (existing_fill.symbol_ == sell_fill.symbol_ && existing_fill.is_buy() &&
+                state.active_buy_fills_.find(existing_fill.uuid_) != state.active_buy_fills_.end()) {
+                double available = state.active_buy_fills_.at(existing_fill.uuid_);
+                double to_close = std::min(available, remaining);
+                closed_fills.emplace_back(existing_fill.uuid_, to_close);
+                remaining -= to_close;
+            }
+        }
+
+        return closed_fills;
     }
 
 }  // namespace simulators
