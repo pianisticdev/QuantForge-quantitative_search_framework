@@ -172,21 +172,21 @@ namespace models {
         Money cash_delta_;
         models::Position position_;
         models::Fill fill_;
-        std::optional<models::ExitOrder> exit_order_;
+        std::vector<models::ExitOrder> exit_orders_;
         std::optional<models::Order> partial_order_;
 
         // Success Case Constructor
         ExecutionResultSuccess(Money cash_delta, std::optional<models::Order> partial_order, models::Position position, models::Fill fill,
-                               std::optional<models::ExitOrder> exit_order)
+                               std::vector<models::ExitOrder> exit_orders)
             : message_(partial_order.has_value() ? "Partial fill" : "Complete fill"),
               cash_delta_(cash_delta),
               position_(std::move(position)),
               fill_(std::move(fill)),
-              exit_order_(std::move(exit_order)),
+              exit_orders_(std::move(exit_orders)),
               partial_order_(std::move(partial_order)) {}
 
         [[nodiscard]] bool is_partial_fill() const { return partial_order_.has_value(); }
-        [[nodiscard]] bool has_exit_strategy() const { return exit_order_.has_value(); }
+        [[nodiscard]] bool has_exit_strategy() const { return !exit_orders_.empty(); }
     };
 
     struct ExecutionResultError {

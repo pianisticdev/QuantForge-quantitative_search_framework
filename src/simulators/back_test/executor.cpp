@@ -8,12 +8,11 @@
 namespace simulators {
     std::pair<double, double> Executor::get_fillable_and_remaining_quantities(const models::Order& order, const plugins::manifest::HostParams& host_params,
                                                                               const simulators::State& state) {
-        if (host_params.fill_max_pct_of_volume_ != std::nullopt) {
-            auto symbol_cash = state.current_prices_.at(order.symbol_) * order.quantity_;
-            auto fill_pct = symbol_cash.to_dollars() / static_cast<double>(state.current_volumes_.at(order.symbol_));
+        if (host_params.fill_max_pct_of_volume_.has_value()) {
+            auto bar_volume = static_cast<double>(state.current_volumes_.at(order.symbol_));
+            auto max_fill_quantity = bar_volume * host_params.fill_max_pct_of_volume_.value();
 
-            if (host_params.fill_max_pct_of_volume_.has_value() && fill_pct > host_params.fill_max_pct_of_volume_.value()) {
-                auto max_fill_quantity = static_cast<double>(state.current_volumes_.at(order.symbol_)) * host_params.fill_max_pct_of_volume_.value();
+            if (order.quantity_ > max_fill_quantity) {
                 auto remaining_quantity = order.quantity_ - max_fill_quantity;
                 return {max_fill_quantity, remaining_quantity};
             }
@@ -58,16 +57,17 @@ namespace simulators {
 
         models::Fill fill(order.symbol_, order.action_, fillable_quantity, state.current_prices_.at(order.symbol_), state.current_timestamp_ns_);
 
-        auto exit_order = [&, state]() -> std::optional<models::ExitOrder> {
+        auto exit_orders = [&, state]() -> std::vector<models::ExitOrder> {
+            std::vector<models::ExitOrder> exit_orders;
             if (order.stop_loss_price_.has_value()) {
-                return models::StopLossExitOrder(order.symbol_, fillable_quantity, order.stop_loss_price_.value(), fill.price_, state.current_timestamp_ns_,
-                                                 fill.uuid_);
+                exit_orders.emplace_back(std::in_place_type<models::StopLossExitOrder>, order.symbol_, fillable_quantity, order.stop_loss_price_.value(),
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_);
             }
             if (order.take_profit_price_.has_value()) {
-                return models::TakeProfitExitOrder(order.symbol_, fillable_quantity, order.take_profit_price_.value(), fill.price_, state.current_timestamp_ns_,
-                                                   fill.uuid_);
+                exit_orders.emplace_back(std::in_place_type<models::TakeProfitExitOrder>, order.symbol_, fillable_quantity, order.take_profit_price_.value(),
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_);
             }
-            return std::nullopt;
+            return exit_orders;
         }();
 
         auto commission = Exchange::calculate_commision(fill, host_params);
@@ -95,10 +95,10 @@ namespace simulators {
             models::Order partial_order = order;
             partial_order.quantity_ = remaining_quantity;
             partial_order.created_at_ns_ = state.current_timestamp_ns_;
-            return models::ExecutionResultSuccess(cash_delta, std::make_optional(partial_order), position, fill, exit_order);
+            return models::ExecutionResultSuccess(cash_delta, std::make_optional(partial_order), position, fill, exit_orders);
         }
 
-        return models::ExecutionResultSuccess(cash_delta, std::nullopt, position, fill, exit_order);
+        return models::ExecutionResultSuccess(cash_delta, std::nullopt, position, fill, exit_orders);
     }
 
     models::Order Executor::signal_to_order(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {

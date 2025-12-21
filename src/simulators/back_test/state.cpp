@@ -24,9 +24,11 @@ namespace simulators {
             reduce_active_fills_fifo(execution_result.fill_.symbol_, execution_result.fill_.quantity_);
         }
 
-        if (execution_result.exit_order_.has_value()) {
-            exit_orders_.emplace_back(execution_result.exit_order_.value());
-            new_exit_orders_.emplace_back(execution_result.exit_order_.value());
+        if (!execution_result.exit_orders_.empty()) {
+            for (const auto& exit_order : execution_result.exit_orders_) {
+                exit_orders_.emplace_back(exit_order);
+                new_exit_orders_.emplace_back(exit_order);
+            }
         }
 
         if (execution_result.position_.quantity_ == 0) {
