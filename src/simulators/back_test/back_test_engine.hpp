@@ -12,6 +12,7 @@
 #include "../../plugins/loaders/interface.hpp"
 #include "../../utils/min_heap.hpp"
 #include "./exit_order_book.hpp"
+#include "./limit_order_book.hpp"
 #include "./models.hpp"
 #include "./slippage_calculator.hpp"
 #include "./state.hpp"
@@ -30,6 +31,7 @@ namespace simulators {
         BackTestEngine(const plugins::loaders::IPluginLoader* plugin, const forge::DataStore* data_store);
         void run();
         void execute_order_book(const http::stock_api::AggregateBarResult& bar, const plugins::manifest::HostParams& host_params);
+        void execute_limit_orders(const plugins::manifest::HostParams& host_params);
         void handle_execution_result(const models::ExecutionResult& execution_result, const plugins::manifest::HostParams& host_params);
         void schedule_plugin_instructions(const PluginResult& result, const plugins::manifest::HostParams& host_params);
         void schedule_exit_orders(const plugins::manifest::HostParams& host_params);
@@ -54,11 +56,24 @@ namespace simulators {
         };
         data_structures::MinHeap<models::ScheduledOrder> order_book_;
         ExitOrderBook exit_order_book_;
+        LimitOrderBook limit_order_book_;
     };
 
     [[nodiscard]] inline models::ScheduledOrder create_scheduled_order(const models::Order& order, const plugins::manifest::HostParams& host_params,
                                                                        const simulators::State& state) {
         return {order, SlippageCalculator::calculate_slippage_time_ns(order, host_params, state)};
+    }
+
+    [[nodiscard]] inline models::ScheduledLimitOrder create_scheduled_limit_order(const models::Order& order) {
+        if (!order.limit_price_.has_value()) {
+            throw std::runtime_error("Cannot create limit order without limit price");
+        }
+
+        if (order.is_buy()) {
+            return models::LimitBuyOrder{order, order.limit_price_.value()};
+        }
+
+        return models::LimitSellOrder{order, order.limit_price_.value()};
     }
 
 }  // namespace simulators

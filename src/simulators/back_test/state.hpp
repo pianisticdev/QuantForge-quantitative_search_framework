@@ -22,6 +22,7 @@ namespace simulators {
         std::vector<models::Fill> new_fills_;
         std::vector<models::ExitOrder> new_exit_orders_;
         std::map<std::string, double> active_buy_fills_;
+        std::map<std::string, double> active_sell_fills_;
         Money peak_equity_;
         double max_drawdown_;
 
@@ -33,7 +34,9 @@ namespace simulators {
 
         void prepare_next_bar_state(const http::stock_api::AggregateBarResult& bar);
 
-        void reduce_active_fills_fifo(const std::string& symbol, double quantity_sold);
+        void reduce_active_buy_fills_fifo(const std::string& symbol, double quantity);
+        void reduce_active_sell_fills_fifo(const std::string& symbol, double quantity);
+        [[nodiscard]] std::optional<std::pair<std::string, double>> populate_active_fills(const models::Fill& fill, double current_qty, bool comparison);
     };
 
 }  // namespace simulators

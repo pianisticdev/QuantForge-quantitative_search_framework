@@ -43,6 +43,9 @@ namespace models {
         [[nodiscard]] bool is_buy() const { return this->action_ == constants::BUY; }
         [[nodiscard]] bool is_sell() const { return this->action_ == constants::SELL; }
 
+        [[nodiscard]] bool is_limit_order() const { return order_type_ == constants::LIMIT && limit_price_.has_value(); }
+        [[nodiscard]] bool is_market_order() const { return order_type_ == constants::MARKET || !limit_price_.has_value(); }
+
         explicit Order(const COrder& inst)
             : quantity_(inst.quantity_),
               symbol_(inst.symbol_),
@@ -89,6 +92,7 @@ namespace models {
 
     struct StopLossExitOrder {
         bool is_triggered_ = false;
+        bool is_short_position_ = false;
         double trigger_quantity_;
         Money stop_loss_price_;
         Money price_;
@@ -98,13 +102,16 @@ namespace models {
 
         bool operator<(const StopLossExitOrder& other) const { return stop_loss_price_ < other.stop_loss_price_; }
 
-        [[nodiscard]] Order to_sell_instruction() const {
-            return {trigger_quantity_, created_at_ns_, symbol_, constants::SELL, "market", std::nullopt, std::nullopt, std::nullopt};
+        [[nodiscard]] Order to_close_instruction() const {
+            std::string action = is_short_position_ ? constants::BUY : constants::SELL;
+            return {trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        StopLossExitOrder(std::string symbol, double quantity, Money stop_loss_price, Money price, int64_t created_at_ns, std::string fill_uuid)
-            : trigger_quantity_(quantity),
+        StopLossExitOrder(std::string symbol, double quantity, Money stop_loss_price, Money price, int64_t created_at_ns, std::string fill_uuid,
+                          bool is_short_position)
+            : is_short_position_(is_short_position),
+              trigger_quantity_(quantity),
               stop_loss_price_(stop_loss_price.to_abi_int64()),
               price_(price.to_abi_int64()),
               created_at_ns_(created_at_ns),
@@ -114,6 +121,7 @@ namespace models {
 
     struct TakeProfitExitOrder {
         bool is_triggered_ = false;
+        bool is_short_position_ = false;
         double trigger_quantity_;
         Money take_profit_price_;
         Money price_;
@@ -123,13 +131,16 @@ namespace models {
 
         bool operator<(const TakeProfitExitOrder& other) const { return take_profit_price_ > other.take_profit_price_; }
 
-        [[nodiscard]] Order to_sell_instruction() const {
-            return {trigger_quantity_, created_at_ns_, symbol_, constants::SELL, "market", std::nullopt, std::nullopt, std::nullopt};
+        [[nodiscard]] Order to_close_instruction() const {
+            std::string action = is_short_position_ ? constants::BUY : constants::SELL;
+            return {trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        TakeProfitExitOrder(std::string symbol, double quantity, Money take_profit_price, Money price, int64_t created_at_ns, std::string fill_uuid)
-            : trigger_quantity_(quantity),
+        TakeProfitExitOrder(std::string symbol, double quantity, Money take_profit_price, Money price, int64_t created_at_ns, std::string fill_uuid,
+                            bool is_short_position)
+            : is_short_position_(is_short_position),
+              trigger_quantity_(quantity),
               take_profit_price_(take_profit_price.to_abi_int64()),
               price_(price.to_abi_int64()),
               created_at_ns_(created_at_ns),
@@ -205,6 +216,26 @@ namespace models {
 
         bool operator<(const ScheduledOrder& other) const { return scheduled_fill_at_ns_ < other.scheduled_fill_at_ns_; }
     };
+
+    struct LimitBuyOrder {
+        Order order_;
+        Money limit_price_;
+
+        LimitBuyOrder(Order order, Money limit_price) : order_(std::move(order)), limit_price_(limit_price) {}
+
+        bool operator<(const LimitBuyOrder& other) const { return limit_price_ < other.limit_price_; }
+    };
+
+    struct LimitSellOrder {
+        Order order_;
+        Money limit_price_;
+
+        LimitSellOrder(Order order, Money limit_price) : order_(std::move(order)), limit_price_(limit_price) {}
+
+        bool operator<(const LimitSellOrder& other) const { return limit_price_ < other.limit_price_; }
+    };
+
+    using ScheduledLimitOrder = std::variant<LimitBuyOrder, LimitSellOrder>;
 }  // namespace models
 
 #endif

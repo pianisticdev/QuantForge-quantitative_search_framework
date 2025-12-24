@@ -29,6 +29,8 @@ namespace simulators {
 
         [[nodiscard]] static std::vector<std::pair<std::string, double>> find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill,
                                                                                                             const simulators::State& state);
+        [[nodiscard]] static std::vector<std::pair<std::string, double>> find_sell_fill_uuids_closed_by_buy(const models::Fill& buy_fill,
+                                                                                                            const simulators::State& state);
     };
 
 }  // namespace simulators

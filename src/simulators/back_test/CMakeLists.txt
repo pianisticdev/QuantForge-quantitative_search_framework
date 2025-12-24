@@ -10,5 +10,6 @@ add_library(
     exit_order_book.cpp
     position_calculator.cpp
     slippage_calculator.cpp
+    limit_order_book.cpp
 )
 target_include_directories(simulators_back_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

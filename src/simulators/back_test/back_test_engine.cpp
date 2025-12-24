@@ -5,7 +5,6 @@
 
 #include "../../forge/stores/data_store.hpp"
 #include "../../plugins/loaders/interface.hpp"
-#include "../../utils/money_utils.hpp"
 #include "./abi_converter.hpp"
 #include "./exchange.hpp"
 #include "./executor.hpp"
@@ -35,6 +34,7 @@ namespace simulators {
             state_.prepare_next_bar_state(bar);
 
             execute_order_book(bar, host_params);
+            execute_limit_orders(host_params);
             schedule_exit_orders(host_params);
 
             PluginResult result = plugin_->on_bar(bar, state_);
@@ -97,9 +97,12 @@ namespace simulators {
                 if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
                     if (arg.fill_.is_sell()) {
                         auto closed_fills = PositionCalculator::find_buy_fill_uuids_closed_by_sell(arg.fill_, state_);
-                        for (const auto& [fill_uuid, quantity] : closed_fills) {
-                            exit_order_book_.reduce_exit_orders_by_fill_uuid(fill_uuid, quantity);
-                        }
+                        exit_order_book_.reduce_exit_orders_by_fills(closed_fills);
+                    }
+
+                    if (arg.fill_.is_buy()) {
+                        auto closed_fills = PositionCalculator::find_sell_fill_uuids_closed_by_buy(arg.fill_, state_);
+                        exit_order_book_.reduce_exit_orders_by_fills(closed_fills);
                     }
 
                     if (arg.has_exit_strategy()) {
@@ -109,7 +112,12 @@ namespace simulators {
                     }
 
                     if (arg.is_partial_fill()) {
-                        order_book_.push(simulators::create_scheduled_order(arg.partial_order_.value(), host_params, state_));
+                        const auto& partial_order = arg.partial_order_.value();
+                        if (partial_order.is_limit_order()) {
+                            limit_order_book_.add_limit_order(create_scheduled_limit_order(partial_order));
+                        } else {
+                            order_book_.push(create_scheduled_order(partial_order, host_params, state_));
+                        }
                     }
                 }
 
@@ -118,9 +126,6 @@ namespace simulators {
             execution_result);
     }
 
-    // Instead of "executing" a signal, we need to convert it to order earlier, before we add a scheduled instruction to the heap.
-    // We will need to create some new methods to do this, and remove some existing business logic.
-    // But, this will allow us to have a much clearer resolution instruction_heap (scheduled order heap).
     void BackTestEngine::schedule_plugin_instructions(const PluginResult& result, const plugins::manifest::HostParams& host_params) {
         ABIConverter::iterate_c_instructions(result, [&, host_params](const auto& c_intruction) {
             auto instruction = ABIConverter::to_instruction(c_intruction);
@@ -138,22 +143,36 @@ namespace simulators {
                 },
                 instruction);
 
-            auto scheduled_order = create_scheduled_order(order, host_params, state_);
+            if (order.is_limit_order()) {
+                limit_order_book_.add_limit_order(create_scheduled_limit_order(order));
+            } else {
+                order_book_.push(create_scheduled_order(order, host_params, state_));
+            }
+        });
+    }
 
-            order_book_.push(scheduled_order);
+    void BackTestEngine::execute_limit_orders(const plugins::manifest::HostParams& host_params) {
+        limit_order_book_.process_buy_limits(state_, [&, host_params](const models::Order& order) {
+            auto execution_result = Executor::execute_order(order, host_params, state_);
+            handle_execution_result(execution_result, host_params);
+        });
+
+        limit_order_book_.process_sell_limits(state_, [&, host_params](const models::Order& order) {
+            auto execution_result = Executor::execute_order(order, host_params, state_);
+            handle_execution_result(execution_result, host_params);
         });
     }
 
     void BackTestEngine::schedule_exit_orders(const plugins::manifest::HostParams& host_params) {
         exit_order_book_.process_stop_loss_heap(state_, [&, host_params](const models::StopLossExitOrder& exit_order) {
-            auto sell_order = exit_order.to_sell_instruction();
-            auto scheduled_order = create_scheduled_order(sell_order, host_params, state_);
+            auto close_order = exit_order.to_close_instruction();  // RENAMED
+            auto scheduled_order = create_scheduled_order(close_order, host_params, state_);
             order_book_.push(scheduled_order);
         });
 
         exit_order_book_.process_take_profit_heap(state_, [&, host_params](const models::TakeProfitExitOrder& exit_order) {
-            auto sell_order = exit_order.to_sell_instruction();
-            auto scheduled_order = create_scheduled_order(sell_order, host_params, state_);
+            auto close_order = exit_order.to_close_instruction();  // RENAMED
+            auto scheduled_order = create_scheduled_order(close_order, host_params, state_);
             order_book_.push(scheduled_order);
         });
     }

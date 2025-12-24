@@ -22,6 +22,8 @@ namespace simulators {
     }
 
     void ExitOrderBook::process_stop_loss_heap(const simulators::State& state, const std::function<void(const models::StopLossExitOrder&)>& callback) {
+        std::vector<models::StopLossExitOrder> not_triggered;
+
         while (!stop_loss_heap_.empty()) {
             auto top_trade_opt = stop_loss_heap_.top();
 
@@ -29,24 +31,39 @@ namespace simulators {
                 break;
             }
 
-            if (state.positions_.find(top_trade_opt.value().symbol_) == state.positions_.end()) {
+            auto pos_it = state.positions_.find(top_trade_opt.value().symbol_);
+            if (pos_it == state.positions_.end()) {
                 stop_loss_heap_.pop();
                 continue;
             }
 
             models::StopLossExitOrder exit_order = top_trade_opt.value();
+            Money current_price = state.current_prices_.at(exit_order.symbol_);
 
-            if (exit_order.stop_loss_price_ < state.current_prices_.at(exit_order.symbol_)) {
-                break;  // Exit early
+            bool should_trigger = false;
+            if (exit_order.is_short_position_) {
+                should_trigger = current_price >= exit_order.stop_loss_price_;
+            } else {
+                should_trigger = current_price <= exit_order.stop_loss_price_;
             }
 
             stop_loss_heap_.pop();
 
-            callback(exit_order);  // Process the exit order
+            if (should_trigger) {
+                callback(exit_order);
+            } else {
+                not_triggered.push_back(exit_order);
+            }
+        }
+
+        for (const auto& order : not_triggered) {
+            stop_loss_heap_.push(order);
         }
     }
 
     void ExitOrderBook::process_take_profit_heap(const simulators::State& state, const std::function<void(const models::TakeProfitExitOrder&)>& callback) {
+        std::vector<models::TakeProfitExitOrder> not_triggered;
+
         while (!take_profit_heap_.empty()) {
             auto top_trade_opt = take_profit_heap_.top();
 
@@ -54,20 +71,39 @@ namespace simulators {
                 break;
             }
 
-            if (state.positions_.find(top_trade_opt.value().symbol_) == state.positions_.end()) {
+            auto pos_it = state.positions_.find(top_trade_opt.value().symbol_);
+            if (pos_it == state.positions_.end()) {
                 take_profit_heap_.pop();
                 continue;
             }
 
-            auto exit_order = top_trade_opt.value();
+            models::TakeProfitExitOrder exit_order = top_trade_opt.value();
+            Money current_price = state.current_prices_.at(exit_order.symbol_);
 
-            if (exit_order.take_profit_price_ > state.current_prices_.at(exit_order.symbol_)) {
-                break;  // Exit early
+            bool should_trigger = false;
+            if (exit_order.is_short_position_) {
+                should_trigger = current_price <= exit_order.take_profit_price_;
+            } else {
+                should_trigger = current_price >= exit_order.take_profit_price_;
             }
 
             take_profit_heap_.pop();
 
-            callback(exit_order);  // Process the exit order
+            if (should_trigger) {
+                callback(exit_order);
+            } else {
+                not_triggered.push_back(exit_order);
+            }
+        }
+
+        for (const auto& order : not_triggered) {
+            take_profit_heap_.push(order);
+        }
+    }
+
+    void ExitOrderBook::reduce_exit_orders_by_fills(const std::vector<std::pair<std::string, double>>& closed_fills) {
+        for (const auto& [fill_uuid, quantity] : closed_fills) {
+            reduce_exit_orders_by_fill_uuid(fill_uuid, quantity);
         }
     }
 

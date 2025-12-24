@@ -44,28 +44,29 @@ namespace simulators {
             }
         }
 
-        if (order.is_sell()) {
-            auto pos_it = state.positions_.find(order.symbol_);
-            if (pos_it == state.positions_.end()) {
-                return models::ExecutionResultError("Cannot sell " + order.symbol_ + ": no position exists");
-            }
-            if (fillable_quantity > pos_it->second.quantity_) {
-                return models::ExecutionResultError("Insufficient position size for " + order.symbol_ + ": trying to sell " +
-                                                    std::to_string(fillable_quantity) + " but only have " + std::to_string(pos_it->second.quantity_));
-            }
+        auto pos_it = state.positions_.find(order.symbol_);
+        double current_position = (pos_it != state.positions_.end()) ? pos_it->second.quantity_ : 0.0;
+
+        if (order.is_buy() && current_position < 0) {
+            // Buying to cover short - no special restriction, but validate we don't over-cover beyond our intent
+            // (this is usually fine, results in going long)
         }
+        // Selling with no position or short position is now ALLOWED (opens/adds to short)
+        // Selling with long position reduces the long (and may flip to short)
 
         models::Fill fill(order.symbol_, order.action_, fillable_quantity, state.current_prices_.at(order.symbol_), state.current_timestamp_ns_);
 
-        auto exit_orders = [&, state]() -> std::vector<models::ExitOrder> {
+        bool is_opening_short = order.is_sell() && current_position <= 0;
+
+        auto exit_orders = [&, state, is_opening_short]() -> std::vector<models::ExitOrder> {
             std::vector<models::ExitOrder> exit_orders;
             if (order.stop_loss_price_.has_value()) {
                 exit_orders.emplace_back(std::in_place_type<models::StopLossExitOrder>, order.symbol_, fillable_quantity, order.stop_loss_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_);
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);  // NEW param
             }
             if (order.take_profit_price_.has_value()) {
                 exit_orders.emplace_back(std::in_place_type<models::TakeProfitExitOrder>, order.symbol_, fillable_quantity, order.take_profit_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_);
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);  // NEW param
             }
             return exit_orders;
         }();

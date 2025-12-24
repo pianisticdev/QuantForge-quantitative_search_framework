@@ -12,16 +12,45 @@ namespace simulators {
         max_drawdown_ = 0.0;
     }
 
+    std::optional<std::pair<std::string, double>> State::populate_active_fills(const models::Fill& fill, double current_qty, bool comparison) {
+        if (!comparison) {
+            return std::make_optional(std::pair<std::string, double>{fill.uuid_, fill.quantity_});
+        }
+
+        double diff_qty = std::min(fill.quantity_, std::abs(current_qty));
+        if (diff_qty > 0) {
+            if (fill.is_buy()) {
+                reduce_active_sell_fills_fifo(fill.symbol_, diff_qty);
+            } else {
+                reduce_active_buy_fills_fifo(fill.symbol_, diff_qty);
+            }
+        }
+
+        double open_qty = fill.quantity_ - diff_qty;
+        if (open_qty > constants::EPSILON) {
+            return std::make_optional(std::pair<std::string, double>{fill.uuid_, open_qty});
+        }
+
+        return std::nullopt;
+    }
+
     void State::update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params) {
         cash_ += execution_result.cash_delta_;
 
         fills_.emplace_back(execution_result.fill_);
         new_fills_.emplace_back(execution_result.fill_);
 
-        if (execution_result.fill_.is_buy()) {
-            active_buy_fills_[execution_result.fill_.uuid_] = execution_result.fill_.quantity_;
-        } else if (execution_result.fill_.is_sell()) {
-            reduce_active_fills_fifo(execution_result.fill_.symbol_, execution_result.fill_.quantity_);
+        auto pos_it = positions_.find(execution_result.fill_.symbol_);
+        double current_qty = (pos_it != positions_.end()) ? pos_it->second.quantity_ : 0.0;
+        auto comparison = execution_result.fill_.is_buy() ? current_qty < 0 : current_qty > 0;
+        auto active_fills_optional = populate_active_fills(execution_result.fill_, current_qty, comparison);
+        if (active_fills_optional.has_value()) {
+            auto [fill_uuid, quantity] = active_fills_optional.value();
+            if (execution_result.fill_.is_buy()) {
+                active_buy_fills_[fill_uuid] = quantity;
+            } else if (execution_result.fill_.is_sell()) {
+                active_sell_fills_[fill_uuid] = quantity;
+            }
         }
 
         if (!execution_result.exit_orders_.empty()) {
@@ -83,11 +112,11 @@ namespace simulators {
         current_volumes_[bar.symbol_] = static_cast<int64_t>(bar.volume_);
     }
 
-    void State::reduce_active_fills_fifo(const std::string& symbol, double quantity_sold) {
-        double remaining = quantity_sold;
+    void State::reduce_active_buy_fills_fifo(const std::string& symbol, double quantity) {
+        double remaining = quantity;
 
         for (auto& fill : fills_) {
-            if (remaining <= 0) {
+            if (remaining <= constants::EPSILON) {
                 break;
             }
 
@@ -104,9 +133,28 @@ namespace simulators {
                 remaining -= to_close;
             }
         }
+    }
 
-        if (remaining > constants::EPSILON) {
-            throw std::runtime_error("FIFO matching error: tried to sell more than available");
+    void State::reduce_active_sell_fills_fifo(const std::string& symbol, double quantity) {
+        double remaining = quantity;
+
+        for (auto& fill : fills_) {
+            if (remaining <= constants::EPSILON) {
+                break;
+            }
+
+            if (fill.symbol_ == symbol && fill.is_sell() && active_sell_fills_.find(fill.uuid_) != active_sell_fills_.end()) {
+                double available = active_sell_fills_[fill.uuid_];
+                double to_close = std::min(available, remaining);
+
+                active_sell_fills_[fill.uuid_] -= to_close;
+
+                if (active_sell_fills_[fill.uuid_] <= constants::EPSILON) {
+                    active_sell_fills_.erase(fill.uuid_);
+                }
+
+                remaining -= to_close;
+            }
         }
     }
 }  // namespace simulators
