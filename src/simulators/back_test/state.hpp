@@ -37,6 +37,7 @@ namespace simulators {
         void reduce_active_buy_fills_fifo(const std::string& symbol, double quantity);
         void reduce_active_sell_fills_fifo(const std::string& symbol, double quantity);
         [[nodiscard]] std::optional<std::pair<std::string, double>> populate_active_fills(const models::Fill& fill, double current_qty, bool comparison);
+        void record_bar_equity_snapshot(const plugins::manifest::HostParams& host_params);
     };
 
 }  // namespace simulators

@@ -68,7 +68,9 @@ namespace simulators {
 
         current_timestamp_ns_ = execution_result.fill_.created_at_ns_;
         current_prices_[execution_result.fill_.symbol_] = execution_result.fill_.price_;
+    }
 
+    void State::record_bar_equity_snapshot(const plugins::manifest::HostParams& host_params) {
         auto equity = EquityCalculator::calculate_equity(*this);
 
         if (equity > peak_equity_) {
@@ -80,25 +82,30 @@ namespace simulators {
             max_drawdown_ = current_drawdown;
         }
 
-        // We need a configurable rolling window, and a configurable risk free rate (0.02 default)
-        equity_curve_.emplace_back(models::EquitySnapshot{
-            .timestamp_ns_ = execution_result.fill_.created_at_ns_,
-            .equity_ = equity,
-            .return_ = EquityCalculator::calculate_return(host_params, equity),
-            .max_drawdown_ = max_drawdown_,
-            .sharpe_ratio_ = 0,
-            .sharpe_ratio_rolling_ = 0,
-            .sortino_ratio_ = 0,
-            .sortino_ratio_rolling_ = 0,
-            .calmar_ratio_ = 0,
-            .calmar_ratio_rolling_ = 0,
-            .tail_ratio_ = 0,
-            .tail_ratio_rolling_ = 0,
-            .value_at_risk_ = 0,
-            .value_at_risk_rolling_ = 0,
-            .conditional_value_at_risk_ = 0,
-            .conditional_value_at_risk_rolling_ = 0,
-        });
+        if (equity_curve_.empty() || equity_curve_.back().timestamp_ns_ != current_timestamp_ns_) {
+            equity_curve_.emplace_back(models::EquitySnapshot{
+                .timestamp_ns_ = current_timestamp_ns_,
+                .equity_ = equity,
+                .return_ = EquityCalculator::calculate_return(host_params, equity),
+                .max_drawdown_ = max_drawdown_,
+                .sharpe_ratio_ = 0,
+                .sharpe_ratio_rolling_ = 0,
+                .sortino_ratio_ = 0,
+                .sortino_ratio_rolling_ = 0,
+                .calmar_ratio_ = 0,
+                .calmar_ratio_rolling_ = 0,
+                .tail_ratio_ = 0,
+                .tail_ratio_rolling_ = 0,
+                .value_at_risk_ = 0,
+                .value_at_risk_rolling_ = 0,
+                .conditional_value_at_risk_ = 0,
+                .conditional_value_at_risk_rolling_ = 0,
+            });
+        } else {
+            equity_curve_.back().equity_ = equity;
+            equity_curve_.back().return_ = EquityCalculator::calculate_return(host_params, equity);
+            equity_curve_.back().max_drawdown_ = max_drawdown_;
+        }
     }
 
     void State::clear_previous_bar_state() {

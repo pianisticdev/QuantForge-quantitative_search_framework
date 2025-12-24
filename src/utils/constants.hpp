@@ -13,6 +13,7 @@ namespace constants {
     inline constexpr int MONEY_BASE = 10;
     inline constexpr int64_t MONEY_SCALED_BASE = 1'000'000.0;
     inline constexpr int NANOSECONDS_PER_MILLISECOND = 1000000;
+    inline constexpr int NANOSECONDS_PER_SECOND = 1000000000;
     inline constexpr const char* STOP_LOSS = "stop_loss";
     inline constexpr const char* TAKE_PROFIT = "take_profit";
     inline constexpr const char* LIMIT = "limit";

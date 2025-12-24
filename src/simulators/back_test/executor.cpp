@@ -35,6 +35,15 @@ namespace simulators {
             return models::ExecutionResultError("No volume data for symbol: " + order.symbol_);
         }
 
+        if (order.is_exit_order_ && order.source_fill_uuid_.has_value()) {
+            const auto& uuid = order.source_fill_uuid_.value();
+            bool fill_still_active = state.active_buy_fills_.contains(uuid) || state.active_sell_fills_.contains(uuid);
+
+            if (!fill_still_active) {
+                return models::ExecutionResultError("Exit order source fill no longer active - skipping");
+            }
+        }
+
         auto [fillable_quantity, remaining_quantity] = Executor::get_fillable_and_remaining_quantities(order, host_params, state);
 
         if (!host_params.allow_fractional_shares_.value_or(false)) {
@@ -47,14 +56,18 @@ namespace simulators {
         auto pos_it = state.positions_.find(order.symbol_);
         double current_position = (pos_it != state.positions_.end()) ? pos_it->second.quantity_ : 0.0;
 
-        if (order.is_buy() && current_position < 0) {
-            // Buying to cover short - no special restriction, but validate we don't over-cover beyond our intent
-            // (this is usually fine, results in going long)
-        }
-        // Selling with no position or short position is now ALLOWED (opens/adds to short)
-        // Selling with long position reduces the long (and may flip to short)
+        Money fill_price = [&]() {
+            if (order.is_limit_order() && order.limit_price_.has_value()) {
+                Money current_price = state.current_prices_.at(order.symbol_);
+                if (order.is_buy()) {
+                    return std::min(order.limit_price_.value(), current_price);
+                }
+                return std::max(order.limit_price_.value(), current_price);
+            }
+            return state.current_prices_.at(order.symbol_);
+        }();
 
-        models::Fill fill(order.symbol_, order.action_, fillable_quantity, state.current_prices_.at(order.symbol_), state.current_timestamp_ns_);
+        models::Fill fill(order.symbol_, order.action_, fillable_quantity, fill_price, state.current_timestamp_ns_);
 
         bool is_opening_short = order.is_sell() && current_position <= 0;
 
@@ -62,11 +75,11 @@ namespace simulators {
             std::vector<models::ExitOrder> exit_orders;
             if (order.stop_loss_price_.has_value()) {
                 exit_orders.emplace_back(std::in_place_type<models::StopLossExitOrder>, order.symbol_, fillable_quantity, order.stop_loss_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);  // NEW param
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);
             }
             if (order.take_profit_price_.has_value()) {
                 exit_orders.emplace_back(std::in_place_type<models::TakeProfitExitOrder>, order.symbol_, fillable_quantity, order.take_profit_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);  // NEW param
+                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);
             }
             return exit_orders;
         }();

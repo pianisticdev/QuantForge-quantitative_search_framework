@@ -35,7 +35,7 @@ namespace simulators {
 
             execute_order_book(bar, host_params);
             execute_limit_orders(host_params);
-            schedule_exit_orders(host_params);
+            execute_exit_orders(host_params);
 
             PluginResult result = plugin_->on_bar(bar, state_);
 
@@ -44,6 +44,8 @@ namespace simulators {
             }
 
             schedule_plugin_instructions(result, host_params);
+
+            state_.record_bar_equity_snapshot(host_params);
 
             state_.clear_previous_bar_state();
         });
@@ -91,7 +93,8 @@ namespace simulators {
                 using T = std::decay_t<decltype(arg)>;
 
                 if constexpr (std::is_same_v<T, models::ExecutionResultError>) {
-                    throw std::runtime_error("Execution failed: " + arg.message_);
+                    // When we have logger, log the failure
+                    return;
                 }
 
                 if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
@@ -163,17 +166,17 @@ namespace simulators {
         });
     }
 
-    void BackTestEngine::schedule_exit_orders(const plugins::manifest::HostParams& host_params) {
+    void BackTestEngine::execute_exit_orders(const plugins::manifest::HostParams& host_params) {
         exit_order_book_.process_stop_loss_heap(state_, [&, host_params](const models::StopLossExitOrder& exit_order) {
-            auto close_order = exit_order.to_close_instruction();  // RENAMED
-            auto scheduled_order = create_scheduled_order(close_order, host_params, state_);
-            order_book_.push(scheduled_order);
+            auto close_order = exit_order.to_close_instruction();
+            auto execution_result = Executor::execute_order(close_order, host_params, state_);
+            handle_execution_result(execution_result, host_params);
         });
 
         exit_order_book_.process_take_profit_heap(state_, [&, host_params](const models::TakeProfitExitOrder& exit_order) {
-            auto close_order = exit_order.to_close_instruction();  // RENAMED
-            auto scheduled_order = create_scheduled_order(close_order, host_params, state_);
-            order_book_.push(scheduled_order);
+            auto close_order = exit_order.to_close_instruction();
+            auto execution_result = Executor::execute_order(close_order, host_params, state_);
+            handle_execution_result(execution_result, host_params);
         });
     }
 

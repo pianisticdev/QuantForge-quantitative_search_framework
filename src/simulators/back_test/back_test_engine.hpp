@@ -34,7 +34,7 @@ namespace simulators {
         void execute_limit_orders(const plugins::manifest::HostParams& host_params);
         void handle_execution_result(const models::ExecutionResult& execution_result, const plugins::manifest::HostParams& host_params);
         void schedule_plugin_instructions(const PluginResult& result, const plugins::manifest::HostParams& host_params);
-        void schedule_exit_orders(const plugins::manifest::HostParams& host_params);
+        void execute_exit_orders(const plugins::manifest::HostParams& host_params);
         [[nodiscard]] const BackTestReport& get_report();
         void resolve_execution(const models::ExecutionResult& execution_result, const plugins::manifest::HostParams& host_params);
 
@@ -53,6 +53,10 @@ namespace simulators {
             .equity_curve_ = {},
             .peak_equity_ = Money(0),
             .max_drawdown_ = 0.0,
+            .active_buy_fills_ = {},
+            .active_sell_fills_ = {},
+            .new_fills_ = {},
+            .new_exit_orders_ = {},
         };
         data_structures::MinHeap<models::ScheduledOrder> order_book_;
         ExitOrderBook exit_order_book_;

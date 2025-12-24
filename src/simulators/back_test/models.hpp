@@ -31,11 +31,13 @@ namespace models {
     };
 
     struct Order {
+        bool is_exit_order_ = false;
         double quantity_;
         int64_t created_at_ns_ = std::chrono::system_clock::now().time_since_epoch().count();
         std::string symbol_;
         std::string action_;
         std::string order_type_;
+        std::optional<std::string> source_fill_uuid_;  // Used for exit orders
         std::optional<Money> limit_price_;
         std::optional<Money> stop_loss_price_;
         std::optional<Money> take_profit_price_;
@@ -104,7 +106,10 @@ namespace models {
 
         [[nodiscard]] Order to_close_instruction() const {
             std::string action = is_short_position_ ? constants::BUY : constants::SELL;
-            return {trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
+            Order order{trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
+            order.is_exit_order_ = true;
+            order.source_fill_uuid_ = fill_uuid_;
+            return order;
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -133,7 +138,10 @@ namespace models {
 
         [[nodiscard]] Order to_close_instruction() const {
             std::string action = is_short_position_ ? constants::BUY : constants::SELL;
-            return {trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
+            Order order{trigger_quantity_, created_at_ns_, symbol_, action, "market", std::nullopt, std::nullopt, std::nullopt};
+            order.is_exit_order_ = true;
+            order.source_fill_uuid_ = fill_uuid_;
+            return order;
         }
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
