@@ -53,57 +53,19 @@ namespace simulators {
             }
         }
 
-        auto pos_it = state.positions_.find(order.symbol_);
-        double current_position = (pos_it != state.positions_.end()) ? pos_it->second.quantity_ : 0.0;
-
-        Money fill_price = [&]() {
-            if (order.is_limit_order() && order.limit_price_.has_value()) {
-                Money current_price = state.current_prices_.at(order.symbol_);
-                if (order.is_buy()) {
-                    return std::min(order.limit_price_.value(), current_price);
-                }
-                return std::max(order.limit_price_.value(), current_price);
-            }
-            return state.current_prices_.at(order.symbol_);
-        }();
+        Money fill_price = calculate_fill_price(order, state);
 
         models::Fill fill(order.symbol_, order.action_, fillable_quantity, fill_price, state.current_timestamp_ns_);
 
-        bool is_opening_short = order.is_sell() && current_position <= 0;
+        auto exit_orders = create_exit_orders(order, fill, state, fillable_quantity);
 
-        auto exit_orders = [&, state, is_opening_short]() -> std::vector<models::ExitOrder> {
-            std::vector<models::ExitOrder> exit_orders;
-            if (order.stop_loss_price_.has_value()) {
-                exit_orders.emplace_back(std::in_place_type<models::StopLossExitOrder>, order.symbol_, fillable_quantity, order.stop_loss_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);
-            }
-            if (order.take_profit_price_.has_value()) {
-                exit_orders.emplace_back(std::in_place_type<models::TakeProfitExitOrder>, order.symbol_, fillable_quantity, order.take_profit_price_.value(),
-                                         fill.price_, state.current_timestamp_ns_, fill.uuid_, is_opening_short);
-            }
-            return exit_orders;
-        }();
-
-        auto commission = Exchange::calculate_commision(fill, host_params);
-
-        auto fill_value = fill.price_ * fillable_quantity;
-        auto cash_delta = [&]() {
-            if (order.is_buy()) {
-                return (fill_value + commission) * -1;
-            }
-
-            if (order.is_sell()) {
-                return fill_value - commission;
-            }
-
-            return Money(0);
-        }();
+        auto cash_delta = calculate_cash_delta(order, fill, host_params, fillable_quantity);
 
         if ((state.cash_ + cash_delta).to_dollars() < 0) {
             return models::ExecutionResultError("Insufficient funds for trade and commission");
         }
 
-        auto position = PositionCalculator::calculate_position(order, fillable_quantity, state);
+        auto position = PositionCalculator::calculate_position(order, fillable_quantity, fill_price, state);
 
         if (remaining_quantity > 0) {
             models::Order partial_order = order;
@@ -113,6 +75,53 @@ namespace simulators {
         }
 
         return models::ExecutionResultSuccess(cash_delta, std::nullopt, position, fill, exit_orders);
+    }
+
+    std::vector<models::ExitOrder> Executor::create_exit_orders(const models::Order& order, const models::Fill& fill, const simulators::State& state,
+                                                                double fillable_quantity) {
+        auto pos_it = state.positions_.find(order.symbol_);
+        double current_position = (pos_it != state.positions_.end()) ? pos_it->second.quantity_ : 0.0;
+
+        bool is_short_position_fill = order.is_sell() && current_position <= 0;
+
+        std::vector<models::ExitOrder> exit_orders;
+        if (order.stop_loss_price_.has_value()) {
+            exit_orders.emplace_back(std::in_place_type<models::StopLossExitOrder>, order.symbol_, fillable_quantity, order.stop_loss_price_.value(),
+                                     fill.price_, state.current_timestamp_ns_, fill.uuid_, is_short_position_fill);
+        }
+        if (order.take_profit_price_.has_value()) {
+            exit_orders.emplace_back(std::in_place_type<models::TakeProfitExitOrder>, order.symbol_, fillable_quantity, order.take_profit_price_.value(),
+                                     fill.price_, state.current_timestamp_ns_, fill.uuid_, is_short_position_fill);
+        }
+        return exit_orders;
+    }
+
+    Money Executor::calculate_cash_delta(const models::Order& order, const models::Fill& fill, const plugins::manifest::HostParams& host_params,
+                                         double fillable_quantity) {
+        auto commission = Exchange::calculate_commision(fill, host_params);
+
+        auto fill_value = fill.price_ * fillable_quantity;
+
+        if (order.is_buy()) {
+            return (fill_value + commission) * -1;
+        }
+
+        if (order.is_sell()) {
+            return fill_value - commission;
+        }
+
+        return Money(0);
+    }
+
+    Money Executor::calculate_fill_price(const models::Order& order, const simulators::State& state) {
+        if (order.is_limit_order() && order.limit_price_.has_value()) {
+            Money current_price = state.current_prices_.at(order.symbol_);
+            if (order.is_buy()) {
+                return std::min(order.limit_price_.value(), current_price);
+            }
+            return std::max(order.limit_price_.value(), current_price);
+        }
+        return state.current_prices_.at(order.symbol_);
     }
 
     models::Order Executor::signal_to_order(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {

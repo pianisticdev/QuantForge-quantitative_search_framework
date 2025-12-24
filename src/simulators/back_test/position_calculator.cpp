@@ -82,7 +82,8 @@ namespace simulators {
         return std::nullopt;
     }
 
-    models::Position PositionCalculator::calculate_position(const models::Order& order, double fillable_quantity, const simulators::State& state) {
+    models::Position PositionCalculator::calculate_position(const models::Order& order, double fillable_quantity, Money fill_price,
+                                                            const simulators::State& state) {
         auto position = [&, state]() -> models::Position {
             auto it = state.positions_.find(order.symbol_);
             if (it != state.positions_.end()) {
@@ -93,7 +94,6 @@ namespace simulators {
         }();
 
         double old_quantity = position.quantity_;
-        Money fill_price = state.current_prices_.at(order.symbol_);
 
         if (order.is_buy()) {
             double new_quantity = old_quantity + fillable_quantity;

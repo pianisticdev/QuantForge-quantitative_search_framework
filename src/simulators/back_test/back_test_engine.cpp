@@ -122,9 +122,9 @@ namespace simulators {
                             order_book_.push(create_scheduled_order(partial_order, host_params, state_));
                         }
                     }
-                }
 
-                resolve_execution(arg, host_params);
+                    state_.update_state(arg);
+                }
             },
             execution_result);
     }
@@ -181,17 +181,5 @@ namespace simulators {
     }
 
     const BackTestReport& BackTestEngine::get_report() { return report_; }
-
-    void BackTestEngine::resolve_execution(const models::ExecutionResult& execution_result, const plugins::manifest::HostParams& host_params) {
-        std::visit(
-            [&](auto arg) {
-                using T = std::decay_t<decltype(arg)>;
-
-                if constexpr (std::is_same_v<T, models::ExecutionResultSuccess>) {
-                    state_.update_state(arg, host_params);
-                }
-            },
-            execution_result);
-    }
 
 }  // namespace simulators

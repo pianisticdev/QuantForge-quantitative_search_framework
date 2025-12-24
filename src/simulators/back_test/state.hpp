@@ -28,7 +28,7 @@ namespace simulators {
 
         void prepare_initial_state(const plugins::manifest::HostParams& host_params);
 
-        void update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params);
+        void update_state(const models::ExecutionResultSuccess& execution_result);
 
         void clear_previous_bar_state();
 

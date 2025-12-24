@@ -36,7 +36,6 @@ namespace simulators {
         void schedule_plugin_instructions(const PluginResult& result, const plugins::manifest::HostParams& host_params);
         void execute_exit_orders(const plugins::manifest::HostParams& host_params);
         [[nodiscard]] const BackTestReport& get_report();
-        void resolve_execution(const models::ExecutionResult& execution_result, const plugins::manifest::HostParams& host_params);
 
        private:
         const plugins::loaders::IPluginLoader* plugin_;

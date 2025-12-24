@@ -134,12 +134,6 @@
           "default": "0",
           "description": "The amount of slippage per order exection"
         },
-        "tax": {
-          "type": "string",
-          "pattern": "^\\d+(\\.\\d+)?$",
-          "default": "0",
-          "description": "The amount of tax applied to sells"
-        },
         "default_currency": {
           "type": "string",
           "pattern": "^[A-Z]{3}$",

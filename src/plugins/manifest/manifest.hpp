@@ -39,7 +39,6 @@ namespace plugins::manifest {
         int monte_carlo_seed_;
         std::optional<double> commission_;
         std::optional<double> slippage_;
-        std::optional<double> tax_;
         int64_t initial_capital_;
         std::optional<std::string> commission_type_;
         std::optional<std::string> slippage_model_;
@@ -107,7 +106,6 @@ namespace plugins::manifest {
                                                                            .allowed_values_ = {"none", "time_based", "time_volume_based"},
                                                                            .fallback_value_ = "",
                                                                            .error_message_ = "Invalid slippage model"};
-    const ParserOptions<double> TAX_PARSER_OPTIONS = {.is_required_ = true, .allowed_values_ = {}, .fallback_value_ = 0.0, .error_message_ = "Invalid tax"};
     const ParserOptions<std::string_view> DEFAULT_CURRENCY_PARSER_OPTIONS = {
         .is_required_ = true, .allowed_values_ = {"USD"}, .fallback_value_ = "", .error_message_ = "Invalid currency"};
     const ParserOptions<std::string_view> TIMEZONE_PARSER_OPTIONS = {

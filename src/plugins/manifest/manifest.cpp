@@ -110,7 +110,6 @@ namespace plugins::manifest {
             .slippage_ = std::optional<double>(parser::parse_value(doc["host_params"]["slippage"].get_double(), SLIPPAGE_PARSER_OPTIONS)),
             .slippage_model_ =
                 std::optional<std::string>(parser::parse_value(doc["host_params"]["slippage_model"].get_string(), SLIPPAGE_MODEL_PARSER_OPTIONS)),
-            .tax_ = std::optional<double>(parser::parse_value(doc["host_params"]["tax"].get_double(), TAX_PARSER_OPTIONS)),
             .default_currency_ =
                 std::optional<std::string>(parser::parse_value(doc["host_params"]["default_currency"].get_string(), DEFAULT_CURRENCY_PARSER_OPTIONS)),
             .timezone_ = std::optional<std::string>(parser::parse_value(doc["host_params"]["timezone"].get_string(), TIMEZONE_PARSER_OPTIONS)),
@@ -176,7 +175,6 @@ namespace plugins::manifest {
         add_optional("commission_type", host_params_.commission_type_);
         add_optional("slippage", host_params_.slippage_);
         add_optional("slippage_model", host_params_.slippage_model_);
-        add_optional("tax", host_params_.tax_);
         add_optional("default_currency", host_params_.default_currency_);
         add_optional("timezone", host_params_.timezone_);
         add_optional("optimization_mode", host_params_.optimization_mode_);

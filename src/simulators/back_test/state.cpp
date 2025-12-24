@@ -34,7 +34,7 @@ namespace simulators {
         return std::nullopt;
     }
 
-    void State::update_state(const models::ExecutionResultSuccess& execution_result, const plugins::manifest::HostParams& host_params) {
+    void State::update_state(const models::ExecutionResultSuccess& execution_result) {
         cash_ += execution_result.cash_delta_;
 
         fills_.emplace_back(execution_result.fill_);

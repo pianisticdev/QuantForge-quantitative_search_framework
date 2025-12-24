@@ -20,6 +20,12 @@ namespace simulators {
         [[nodiscard]] static std::pair<double, double> get_fillable_and_remaining_quantities(const models::Order& order,
                                                                                              const plugins::manifest::HostParams& host_params,
                                                                                              const simulators::State& state);
+
+        [[nodiscard]] static std::vector<models::ExitOrder> create_exit_orders(const models::Order& order, const models::Fill& fill,
+                                                                               const simulators::State& state, double fillable_quantity);
+        [[nodiscard]] static Money calculate_cash_delta(const models::Order& order, const models::Fill& fill, const plugins::manifest::HostParams& host_params,
+                                                        double fillable_quantity);
+        [[nodiscard]] static Money calculate_fill_price(const models::Order& order, const simulators::State& state);
     };
 
 }  // namespace simulators

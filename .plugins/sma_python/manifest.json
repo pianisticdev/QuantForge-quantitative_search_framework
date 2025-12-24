@@ -9,7 +9,6 @@
     "leverage": "1",
     "commission": "0.0001",
     "slippage": "0",
-    "tax": "0.001",
     "currency": "USD",
     "timezone": "America/New_York"
   },
