@@ -65,9 +65,6 @@ namespace simulators {
         } else {
             positions_[execution_result.position_.symbol_] = execution_result.position_;
         }
-
-        current_timestamp_ns_ = execution_result.fill_.created_at_ns_;
-        current_prices_[execution_result.fill_.symbol_] = execution_result.fill_.price_;
     }
 
     void State::record_bar_equity_snapshot(const plugins::manifest::HostParams& host_params) {

@@ -53,9 +53,9 @@ namespace models {
               symbol_(inst.symbol_),
               action_(inst.action_),
               order_type_(inst.order_type_),
-              limit_price_(Money(inst.limit_price_)),
-              stop_loss_price_(Money(inst.stop_loss_price_)),
-              take_profit_price_(Money(inst.take_profit_price_)) {}
+              limit_price_(inst.limit_price_ == NULL_MARKET_TRIGGER_PRICE ? std::nullopt : std::make_optional(Money(inst.limit_price_))),
+              stop_loss_price_(inst.stop_loss_price_ == NULL_MARKET_TRIGGER_PRICE ? std::nullopt : std::make_optional(Money(inst.stop_loss_price_))),
+              take_profit_price_(inst.take_profit_price_ == NULL_MARKET_TRIGGER_PRICE ? std::nullopt : std::make_optional(Money(inst.take_profit_price_))) {}
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
         Order(double quantity, int64_t created_at_ns, std::string symbol, std::string action, std::string order_type, std::optional<Money> limit_price,
               std::optional<Money> stop_loss_price, std::optional<Money> take_profit_price)

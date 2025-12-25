@@ -81,8 +81,9 @@ namespace simulators {
                                                                 double fillable_quantity) {
         auto pos_it = state.positions_.find(order.symbol_);
         double current_position = (pos_it != state.positions_.end()) ? pos_it->second.quantity_ : 0.0;
+        double new_position = current_position + (order.is_buy() ? fillable_quantity : -fillable_quantity);
 
-        bool is_short_position_fill = order.is_sell() && current_position <= 0;
+        bool is_short_position_fill = order.is_sell() && new_position <= 0;
 
         std::vector<models::ExitOrder> exit_orders;
         if (order.stop_loss_price_.has_value()) {
