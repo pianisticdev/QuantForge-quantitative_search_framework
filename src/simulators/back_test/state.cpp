@@ -8,6 +8,7 @@
 namespace simulators {
     void State::prepare_initial_state(const plugins::manifest::HostParams& host_params) {
         cash_ = Money(host_params.initial_capital_);
+        margin_in_use_ = Money(0);
         peak_equity_ = Money(host_params.initial_capital_);
         max_drawdown_ = 0.0;
     }
@@ -44,6 +45,7 @@ namespace simulators {
         const double current_qty = (pos_it != positions_.end()) ? pos_it->second.quantity_ : 0.0;
         const bool comparison = execution_result.fill_.is_buy() ? current_qty < 0 : current_qty > 0;
         const auto active_fills_optional = populate_active_fills(execution_result.fill_, current_qty, comparison);
+
         if (active_fills_optional.has_value()) {
             const auto [fill_uuid, quantity] = active_fills_optional.value();
             if (execution_result.fill_.is_buy()) {
@@ -51,6 +53,12 @@ namespace simulators {
             } else if (execution_result.fill_.is_sell()) {
                 active_sell_fills_[fill_uuid] = quantity;
             }
+
+            const double proportion = quantity / execution_result.fill_.quantity_;
+            const Money proportional_margin = execution_result.margin_used_ * proportion;
+            active_margin_for_fills_[fill_uuid] = proportional_margin;
+            active_leverage_for_fills_[fill_uuid] = execution_result.leverage_;
+            margin_in_use_ += proportional_margin;
         }
 
         if (!execution_result.exit_orders_.empty()) {
@@ -141,9 +149,19 @@ namespace simulators {
 
                 remaining -= to_close;
 
-                Money margin_to_free = active_margin_for_fills_[fill.uuid_] * (to_close / fill.quantity_);
-                margin_in_use_ -= margin_to_free;
-                active_margin_for_fills_[fill.uuid_] -= margin_to_free;
+                if (active_margin_for_fills_.find(fill.uuid_) != active_margin_for_fills_.end()) {
+                    const Money total_margin_for_fill = active_margin_for_fills_[fill.uuid_];
+                    const double proportion_closed = to_close / (available);
+                    const Money margin_to_free = total_margin_for_fill * proportion_closed;
+
+                    margin_in_use_ -= margin_to_free;
+                    active_margin_for_fills_[fill.uuid_] -= margin_to_free;
+
+                    if (active_margin_for_fills_[fill.uuid_].to_dollars() <= constants::EPSILON) {
+                        active_margin_for_fills_.erase(fill.uuid_);
+                        active_leverage_for_fills_.erase(fill.uuid_);
+                    }
+                }
             }
         }
     }
@@ -168,10 +186,25 @@ namespace simulators {
 
                 remaining -= to_close;
 
-                Money margin_to_free = active_margin_for_fills_[fill.uuid_] * (to_close / fill.quantity_);
-                margin_in_use_ -= margin_to_free;
-                active_margin_for_fills_[fill.uuid_] -= margin_to_free;
+                if (active_margin_for_fills_.find(fill.uuid_) != active_margin_for_fills_.end()) {
+                    const Money total_margin_for_fill = active_margin_for_fills_[fill.uuid_];
+                    const double proportion_closed = to_close / available;
+                    const Money margin_to_free = total_margin_for_fill * proportion_closed;
+
+                    margin_in_use_ -= margin_to_free;
+                    active_margin_for_fills_[fill.uuid_] -= margin_to_free;
+
+                    if (active_margin_for_fills_[fill.uuid_].to_dollars() <= constants::EPSILON) {
+                        active_margin_for_fills_.erase(fill.uuid_);
+                        active_leverage_for_fills_.erase(fill.uuid_);
+                    }
+                }
             }
         }
+    }
+
+    Money State::recalculate_margin_in_use() const {
+        return std::reduce(active_margin_for_fills_.begin(), active_margin_for_fills_.end(), Money(0),
+                           [](const Money& acc, const auto& arg) { return acc + arg.second; });
     }
 }  // namespace simulators

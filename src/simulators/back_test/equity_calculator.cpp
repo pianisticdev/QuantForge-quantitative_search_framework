@@ -6,10 +6,19 @@
 
 namespace simulators {
     Money EquityCalculator::calculate_equity(const simulators::State& state) {
-        const auto sum_equity = [&, state](const Money& acc, const auto& pos) {
-            return acc + (state.get_symbol_close(pos.second.symbol_) * pos.second.quantity_);
-        };
-        return std::reduce(state.positions_.begin(), state.positions_.end(), state.cash_, sum_equity);
+        Money unrealized_pnl(0);
+
+        for (const auto& [symbol, position] : state.positions_) {
+            if (!state.has_symbol_prices(symbol)) {
+                continue;
+            }
+
+            const Money current_price = state.get_symbol_close(symbol);
+            const Money position_pnl = (current_price - position.average_price_) * position.quantity_;
+            unrealized_pnl += position_pnl;
+        }
+
+        return state.cash_ + state.margin_in_use_ + unrealized_pnl;
     }
 
     double EquityCalculator::calculate_return(const plugins::manifest::HostParams& host_params, Money equity) {

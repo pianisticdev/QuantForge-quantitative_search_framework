@@ -75,17 +75,21 @@ namespace models {
 
     struct Fill {
         double quantity_;
+        double leverage_;
         int64_t created_at_ns_;
         Money price_;
+        Money margin_used_;
         std::string symbol_;
         std::string uuid_;
         std::string action_;
 
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-        Fill(std::string symbol, std::string action, double quantity, Money price, int64_t created_at_ns)
+        Fill(std::string symbol, std::string action, double quantity, Money price, int64_t created_at_ns, double leverage = 1.0, Money margin_used = Money(0))
             : quantity_(quantity),
+              leverage_(leverage),
               created_at_ns_(created_at_ns),
               price_(price),
+              margin_used_(margin_used),
               symbol_(std::move(symbol)),
               uuid_(string_utils::create_uuid()),
               action_(std::move(action)) {}
@@ -191,16 +195,20 @@ namespace models {
     struct ExecutionResultSuccess {
         std::string message_;
         Money cash_delta_;
+        Money margin_used_;
+        double leverage_;
         models::Position position_;
         models::Fill fill_;
         std::vector<models::ExitOrder> exit_orders_;
         std::optional<models::Order> partial_order_;
 
-        // Success Case Constructor
-        ExecutionResultSuccess(Money cash_delta, std::optional<models::Order> partial_order, models::Position position, models::Fill fill,
-                               std::vector<models::ExitOrder> exit_orders)
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        ExecutionResultSuccess(Money cash_delta, Money margin_used, double leverage, std::optional<models::Order> partial_order, models::Position position,
+                               models::Fill fill, std::vector<models::ExitOrder> exit_orders)
             : message_(partial_order.has_value() ? "Partial fill" : "Complete fill"),
               cash_delta_(cash_delta),
+              margin_used_(margin_used),
+              leverage_(leverage),
               position_(std::move(position)),
               fill_(std::move(fill)),
               exit_orders_(std::move(exit_orders)),

@@ -32,6 +32,7 @@ namespace simulators {
         std::map<std::string, double> active_buy_fills_;
         std::map<std::string, double> active_sell_fills_;
         std::map<std::string, Money> active_margin_for_fills_;
+        std::map<std::string, double> active_leverage_for_fills_;
         Money peak_equity_;
         double max_drawdown_;
 
@@ -65,6 +66,8 @@ namespace simulators {
         void reduce_active_sell_fills_fifo(const std::string& symbol, double quantity);
         [[nodiscard]] std::optional<std::pair<std::string, double>> populate_active_fills(const models::Fill& fill, double current_qty, bool comparison);
         void record_bar_equity_snapshot(const plugins::manifest::HostParams& host_params);
+
+        [[nodiscard]] Money recalculate_margin_in_use() const;
     };
 
 }  // namespace simulators
