@@ -9,14 +9,11 @@
 
 using namespace money_utils;
 
-namespace simulators {
+namespace simulators::exchange {
 
-    class Exchange {
-       public:
-        [[nodiscard]] static bool is_within_market_hour_restrictions(int64_t timestamp_ns, const plugins::manifest::HostParams& host_params);
-        [[nodiscard]] static Money calculate_commision(const models::Fill& fill, const plugins::manifest::HostParams& host_params);
-    };
+    [[nodiscard]] bool is_within_market_hour_restrictions(int64_t timestamp_ns, const plugins::manifest::HostParams& host_params);
+    [[nodiscard]] Money calculate_commision(const models::Fill& fill, const plugins::manifest::HostParams& host_params);
 
-}  // namespace simulators
+}  // namespace simulators::exchange
 
 #endif

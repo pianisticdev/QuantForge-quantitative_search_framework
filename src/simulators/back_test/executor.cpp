@@ -6,9 +6,9 @@
 #include "./position_calculator.hpp"
 #include "./state.hpp"
 
-namespace simulators {
-    std::pair<double, double> Executor::get_fillable_and_remaining_quantities(const models::Order& order, const plugins::manifest::HostParams& host_params,
-                                                                              const simulators::State& state) {
+namespace simulators::executor {
+    std::pair<double, double> get_fillable_and_remaining_quantities(const models::Order& order, const plugins::manifest::HostParams& host_params,
+                                                                    const simulators::State& state) {
         if (host_params.fill_max_pct_of_volume_.has_value()) {
             const auto bar_volume = static_cast<double>(state.get_symbol_volume(order.symbol_));
             const double max_fill_quantity = bar_volume * host_params.fill_max_pct_of_volume_.value();
@@ -22,8 +22,7 @@ namespace simulators {
         return {order.quantity_, 0};
     }
 
-    models::ExecutionResult Executor::execute_order(const models::Order& order, const plugins::manifest::HostParams& host_params,
-                                                    const simulators::State& state) {
+    models::ExecutionResult execute_order(const models::Order& order, const plugins::manifest::HostParams& host_params, const simulators::State& state) {
         if (order.quantity_ <= 0) {
             return models::ExecutionResultError("Order quantity must be positive");
         }
@@ -45,7 +44,7 @@ namespace simulators {
             }
         }
 
-        auto [fillable_quantity, remaining_quantity] = Executor::get_fillable_and_remaining_quantities(order, host_params, state);
+        auto [fillable_quantity, remaining_quantity] = get_fillable_and_remaining_quantities(order, host_params, state);
 
         if (!host_params.allow_fractional_shares_.value_or(false)) {
             fillable_quantity = std::floor(fillable_quantity);
@@ -64,7 +63,7 @@ namespace simulators {
             calculate_position_opening_quantity(order, fillable_quantity, current_position_quantity, new_position_quantity);
 
         const Money commission =
-            Exchange::calculate_commision(models::Fill(order.symbol_, order.action_, fillable_quantity, fill_price, state.current_timestamp_ns_), host_params);
+            exchange::calculate_commision(models::Fill(order.symbol_, order.action_, fillable_quantity, fill_price, state.current_timestamp_ns_), host_params);
 
         const double leverage = order.leverage_.value_or(1.0);
 
@@ -83,7 +82,7 @@ namespace simulators {
 
         const auto exit_orders = create_exit_orders(order, fill, state, position_opening_quantity, new_position_quantity);
 
-        const models::Position position = PositionCalculator::calculate_position(order, fillable_quantity, fill_price, state);
+        const models::Position position = position_calc::calculate_position(order, fillable_quantity, fill_price, state);
 
         if (remaining_quantity > 0) {
             models::Order partial_order = order;
@@ -96,8 +95,8 @@ namespace simulators {
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-    double Executor::calculate_position_opening_quantity(const models::Order& order, double fillable_quantity, double current_position_quantity,
-                                                         double new_position_quantity) {
+    double calculate_position_opening_quantity(const models::Order& order, double fillable_quantity, double current_position_quantity,
+                                               double new_position_quantity) {
         if (order.is_buy()) {
             if (current_position_quantity >= 0) {
                 return fillable_quantity;
@@ -112,9 +111,9 @@ namespace simulators {
         return std::max(0.0, -new_position_quantity);
     }
 
-    std::vector<models::ExitOrder> Executor::create_exit_orders(const models::Order& order, const models::Fill& fill, const simulators::State& state,
-                                                                // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                                                double position_opening_quantity, double new_position_quantity) {
+    std::vector<models::ExitOrder> create_exit_orders(const models::Order& order, const models::Fill& fill, const simulators::State& state,
+                                                      // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+                                                      double position_opening_quantity, double new_position_quantity) {
         if (position_opening_quantity <= constants::EPSILON) {
             return {};
         }
@@ -133,11 +132,11 @@ namespace simulators {
         return exit_orders;
     }
 
-    Money Executor::calculate_cash_delta(const models::Order& order, Money fill_price, double fillable_quantity, Money commission,
-                                         double position_opening_quantity, Money margin_required, const simulators::State& state) {
+    Money calculate_cash_delta(const models::Order& order, Money fill_price, double fillable_quantity, Money commission, double position_opening_quantity,
+                               Money margin_required, const simulators::State& state) {
         const double position_closing_quantity = fillable_quantity - position_opening_quantity;
 
-        const simulators::ClosingMarginInfo closing_info = calculate_closing_margin_info(order, fill_price, position_closing_quantity, state);
+        const ClosingMarginInfo closing_info = calculate_closing_margin_info(order, fill_price, position_closing_quantity, state);
 
         if (order.is_buy()) {
             const Money opening_cost = margin_required;
@@ -154,7 +153,7 @@ namespace simulators {
         return Money(0);
     }
 
-    Money Executor::calculate_fill_price(const models::Order& order, const simulators::State& state) {
+    Money calculate_fill_price(const models::Order& order, const simulators::State& state) {
         const Money current_bar_close = state.get_symbol_close(order.symbol_);
         if (order.is_limit_order() && order.limit_price_.has_value()) {
             if (order.is_buy()) {
@@ -165,17 +164,16 @@ namespace simulators {
         return current_bar_close;
     }
 
-    models::Order Executor::signal_to_order(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {
-        const std::optional<Money> stop_loss_price = PositionCalculator::calculate_signal_stop_loss_price(signal, host_params, state);
-        const std::optional<Money> take_profit_price = PositionCalculator::calculate_signal_take_profit_price(signal, host_params, state);
-        const double quantity = PositionCalculator::calculate_signal_position_size(signal, host_params, state);
+    models::Order signal_to_order(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {
+        const std::optional<Money> stop_loss_price = position_calc::calculate_signal_stop_loss_price(signal, host_params, state);
+        const std::optional<Money> take_profit_price = position_calc::calculate_signal_take_profit_price(signal, host_params, state);
+        const double quantity = position_calc::calculate_signal_position_size(signal, host_params, state);
 
         return {quantity, state.current_timestamp_ns_, signal.symbol_, signal.action_, constants::MARKET, std::nullopt, stop_loss_price, take_profit_price};
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-    Money Executor::calculate_margin_required(const plugins::manifest::HostParams& host_params, Money fill_price, double position_opening_quantity,
-                                              double leverage) {
+    Money calculate_margin_required(const plugins::manifest::HostParams& host_params, Money fill_price, double position_opening_quantity, double leverage) {
         const double initial_margin_pct = host_params.initial_margin_pct_.value_or(1.0);
         const double opening_value_dollars = fill_price.to_dollars() * position_opening_quantity;
         const double margin_from_leverage = opening_value_dollars / leverage;
@@ -185,11 +183,11 @@ namespace simulators {
     }
 
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-    std::optional<std::string> Executor::validate_margin(const models::Order& order, Money fill_price, Money commission,
-                                                         const plugins::manifest::HostParams& host_params, const simulators::State& state,
-                                                         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                                         double position_opening_quantity, double new_position_quantity, Money margin_required,
-                                                         double fillable_quantity) {
+    std::optional<std::string> validate_margin(const models::Order& order, Money fill_price, Money commission, const plugins::manifest::HostParams& host_params,
+                                               const simulators::State& state,
+                                               // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+                                               double position_opening_quantity, double new_position_quantity, Money margin_required,
+                                               double fillable_quantity) {
         if (order.is_sell() && !host_params.allow_short_selling_.value_or(true)) {
             if (new_position_quantity < 0) {
                 return "Short selling is not allowed";
@@ -209,7 +207,7 @@ namespace simulators {
 
         if (position_opening_quantity <= constants::EPSILON) {
             const double position_closing_quantity = fillable_quantity;
-            const simulators::ClosingMarginInfo closing_info = calculate_closing_margin_info(order, fill_price, position_closing_quantity, state);
+            const ClosingMarginInfo closing_info = calculate_closing_margin_info(order, fill_price, position_closing_quantity, state);
 
             const Money net_cash_flow = closing_info.margin_to_release_ + closing_info.realized_pnl_ - commission;
 
@@ -224,7 +222,7 @@ namespace simulators {
         }
 
         const Money total_required = margin_required + commission;
-        const Money available_margin = EquityCalculator::calculate_available_margin(state);
+        const Money available_margin = equity_calc::calculate_available_margin(state);
 
         if (total_required > available_margin) {
             return "Insufficient margin.";
@@ -233,8 +231,8 @@ namespace simulators {
         return std::nullopt;
     }
 
-    simulators::ClosingMarginInfo Executor::calculate_closing_margin_info(const models::Order& order, Money fill_price, double position_closing_quantity,
-                                                                          const simulators::State& state) {
+    ClosingMarginInfo calculate_closing_margin_info(const models::Order& order, Money fill_price, double position_closing_quantity,
+                                                    const simulators::State& state) {
         if (position_closing_quantity <= constants::EPSILON) {
             return {Money(0), Money(0)};
         }
@@ -274,4 +272,4 @@ namespace simulators {
 
         return {margin_to_release, realized_pnl};
     }
-}  // namespace simulators
+}  // namespace simulators::executor

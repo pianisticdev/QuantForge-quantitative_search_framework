@@ -4,8 +4,8 @@
 
 #include "./state.hpp"
 
-namespace simulators {
-    Money EquityCalculator::calculate_equity(const simulators::State& state) {
+namespace simulators::equity_calc {
+    Money calculate_equity(const simulators::State& state) {
         Money unrealized_pnl(0);
 
         for (const auto& [symbol, position] : state.positions_) {
@@ -21,13 +21,13 @@ namespace simulators {
         return state.cash_ + state.margin_in_use_ + unrealized_pnl;
     }
 
-    double EquityCalculator::calculate_return(const plugins::manifest::HostParams& host_params, Money equity) {
+    double calculate_return(const plugins::manifest::HostParams& host_params, Money equity) {
         const Money initial_capital_money = Money(host_params.initial_capital_);
         const Money net_return = equity - initial_capital_money;
         return net_return.to_dollars() / initial_capital_money.to_dollars();
     }
 
-    double EquityCalculator::calculate_max_drawdown(const simulators::State& state, Money current_equity) {
+    double calculate_max_drawdown(const simulators::State& state, Money current_equity) {
         double current_drawdown = 0.0;
 
         if (state.peak_equity_.to_dollars() > constants::EPSILON) {
@@ -37,5 +37,5 @@ namespace simulators {
         return std::max(current_drawdown, state.max_drawdown_);
     }
 
-    Money EquityCalculator::calculate_available_margin(const simulators::State& state) { return calculate_equity(state) - state.margin_in_use_; }
-}  // namespace simulators
+    Money calculate_available_margin(const simulators::State& state) { return calculate_equity(state) - state.margin_in_use_; }
+}  // namespace simulators::equity_calc

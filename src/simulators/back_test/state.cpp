@@ -76,13 +76,13 @@ namespace simulators {
     }
 
     void State::record_bar_equity_snapshot(const plugins::manifest::HostParams& host_params) {
-        const Money equity = EquityCalculator::calculate_equity(*this);
+        const Money equity = equity_calc::calculate_equity(*this);
 
         if (equity > peak_equity_) {
             peak_equity_ = equity;
         }
 
-        double current_drawdown = EquityCalculator::calculate_max_drawdown(*this, equity);
+        double current_drawdown = equity_calc::calculate_max_drawdown(*this, equity);
         if (current_drawdown > max_drawdown_) {
             max_drawdown_ = current_drawdown;
         }
@@ -91,7 +91,7 @@ namespace simulators {
             equity_curve_.emplace_back(models::EquitySnapshot{
                 .timestamp_ns_ = current_timestamp_ns_,
                 .equity_ = equity,
-                .return_ = EquityCalculator::calculate_return(host_params, equity),
+                .return_ = equity_calc::calculate_return(host_params, equity),
                 .max_drawdown_ = max_drawdown_,
                 .sharpe_ratio_ = 0,
                 .sharpe_ratio_rolling_ = 0,
@@ -108,7 +108,7 @@ namespace simulators {
             });
         } else {
             equity_curve_.back().equity_ = equity;
-            equity_curve_.back().return_ = EquityCalculator::calculate_return(host_params, equity);
+            equity_curve_.back().return_ = equity_calc::calculate_return(host_params, equity);
             equity_curve_.back().max_drawdown_ = max_drawdown_;
         }
     }

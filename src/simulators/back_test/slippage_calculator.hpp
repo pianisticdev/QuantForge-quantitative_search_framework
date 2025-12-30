@@ -7,14 +7,11 @@
 #include "./models.hpp"
 #include "./state.hpp"
 
-namespace simulators {
+namespace simulators::slippage_calc {
 
-    class SlippageCalculator {
-       public:
-        [[nodiscard]] static int64_t calculate_slippage_time_ns(const models::Order& order, const plugins::manifest::HostParams& host_params,
-                                                                const simulators::State& state);
-    };
+    [[nodiscard]] int64_t calculate_slippage_time_ns(const models::Order& order, const plugins::manifest::HostParams& host_params,
+                                                     const simulators::State& state);
 
-}  // namespace simulators
+}  // namespace simulators::slippage_calc
 
 #endif

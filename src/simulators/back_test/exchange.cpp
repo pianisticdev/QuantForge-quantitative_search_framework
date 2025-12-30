@@ -2,9 +2,9 @@
 
 #include "../../utils/time_utils.hpp"
 
-namespace simulators {
+namespace simulators::exchange {
 
-    bool Exchange::is_within_market_hour_restrictions(int64_t timestamp_ns, const plugins::manifest::HostParams& host_params) {
+    bool is_within_market_hour_restrictions(int64_t timestamp_ns, const plugins::manifest::HostParams& host_params) {
         if (host_params.market_hours_only_ != true) {
             return true;
         }
@@ -12,7 +12,7 @@ namespace simulators {
         return time_utils::is_within_market_hours(timestamp_ns);
     }
 
-    Money Exchange::calculate_commision(const models::Fill& fill, const plugins::manifest::HostParams& host_params) {
+    Money calculate_commision(const models::Fill& fill, const plugins::manifest::HostParams& host_params) {
         const std::string commission_type = host_params.commission_type_.value_or(std::string(""));
         const double commission_value = host_params.commission_.value_or(0.0);
 
@@ -35,5 +35,4 @@ namespace simulators {
 
         return Money(0);
     }
-
-}  // namespace simulators
+}  // namespace simulators::exchange

@@ -65,7 +65,7 @@ namespace simulators {
 
     [[nodiscard]] inline models::ScheduledOrder create_scheduled_order(const models::Order& order, const plugins::manifest::HostParams& host_params,
                                                                        const simulators::State& state) {
-        return {order, SlippageCalculator::calculate_slippage_time_ns(order, host_params, state)};
+        return {order, slippage_calc::calculate_slippage_time_ns(order, host_params, state)};
     }
 
     [[nodiscard]] inline models::ScheduledLimitOrder create_scheduled_limit_order(const models::Order& order) {

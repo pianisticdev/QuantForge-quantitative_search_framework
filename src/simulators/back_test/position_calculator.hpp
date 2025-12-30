@@ -12,28 +12,20 @@
 
 using namespace money_utils;
 
-namespace simulators {
+namespace simulators::position_calc {
 
-    class PositionCalculator {
-       public:
-        [[nodiscard]] static double calculate_signal_position_size(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
-                                                                   const simulators::State& state);
-        [[nodiscard]] static std::optional<Money> calculate_signal_stop_loss_price(const models::Signal& signal,
-                                                                                   const plugins::manifest::HostParams& host_params,
-                                                                                   const simulators::State& state);
-        [[nodiscard]] static std::optional<Money> calculate_signal_take_profit_price(const models::Signal& signal,
-                                                                                     const plugins::manifest::HostParams& host_params,
-                                                                                     const simulators::State& state);
+    [[nodiscard]] double calculate_signal_position_size(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
+                                                        const simulators::State& state);
+    [[nodiscard]] std::optional<Money> calculate_signal_stop_loss_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
+                                                                        const simulators::State& state);
+    [[nodiscard]] std::optional<Money> calculate_signal_take_profit_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
+                                                                          const simulators::State& state);
 
-        [[nodiscard]] static models::Position calculate_position(const models::Order& order, double fillable_quantity, Money fill_price,
-                                                                 const simulators::State& state);
+    [[nodiscard]] models::Position calculate_position(const models::Order& order, double fillable_quantity, Money fill_price, const simulators::State& state);
 
-        [[nodiscard]] static std::vector<std::pair<std::string, double>> find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill,
-                                                                                                            const simulators::State& state);
-        [[nodiscard]] static std::vector<std::pair<std::string, double>> find_sell_fill_uuids_closed_by_buy(const models::Fill& buy_fill,
-                                                                                                            const simulators::State& state);
-    };
+    [[nodiscard]] std::vector<std::pair<std::string, double>> find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill, const simulators::State& state);
+    [[nodiscard]] std::vector<std::pair<std::string, double>> find_sell_fill_uuids_closed_by_buy(const models::Fill& buy_fill, const simulators::State& state);
 
-}  // namespace simulators
+}  // namespace simulators::position_calc
 
 #endif

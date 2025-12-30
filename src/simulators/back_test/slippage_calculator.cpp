@@ -5,10 +5,9 @@
 #include "./models.hpp"
 #include "./state.hpp"
 
-namespace simulators {
+namespace simulators::slippage_calc {
 
-    int64_t SlippageCalculator::calculate_slippage_time_ns(const models::Order& order, const plugins::manifest::HostParams& host_params,
-                                                           const simulators::State& state) {
+    int64_t calculate_slippage_time_ns(const models::Order& order, const plugins::manifest::HostParams& host_params, const simulators::State& state) {
         if (!host_params.slippage_model_.has_value() || host_params.slippage_model_.value() == "none") {
             return state.current_timestamp_ns_;
         }
@@ -35,4 +34,4 @@ namespace simulators {
         return state.current_timestamp_ns_;
     }
 
-}  // namespace simulators
+}  // namespace simulators::slippage_calc

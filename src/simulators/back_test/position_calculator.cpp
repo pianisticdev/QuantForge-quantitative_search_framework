@@ -3,11 +3,10 @@
 #include "./equity_calculator.hpp"
 #include "./state.hpp"
 
-namespace simulators {
-    double PositionCalculator::calculate_signal_position_size(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
-                                                              const simulators::State& state) {
+namespace simulators::position_calc {
+    double calculate_signal_position_size(const models::Signal& signal, const plugins::manifest::HostParams& host_params, const simulators::State& state) {
         const Money current_price = state.get_symbol_close(signal.symbol_);
-        const Money equity = EquityCalculator::calculate_equity(state);
+        const Money equity = equity_calc::calculate_equity(state);
 
         const std::string sizing_method = host_params.position_sizing_method_.value_or("fixed_percentage");
         const double position_size_value = host_params.position_size_value_.value_or(constants::DEFAULT_POSITION_SIZE_VALUE);
@@ -39,8 +38,8 @@ namespace simulators {
         return quantity;
     }
 
-    std::optional<Money> PositionCalculator::calculate_signal_stop_loss_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
-                                                                              const simulators::State& state) {
+    std::optional<Money> calculate_signal_stop_loss_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
+                                                          const simulators::State& state) {
         if (!host_params.use_stop_loss_.value_or(false)) {
             return std::nullopt;
         }
@@ -62,8 +61,8 @@ namespace simulators {
         return std::nullopt;
     }
 
-    std::optional<Money> PositionCalculator::calculate_signal_take_profit_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
-                                                                                const simulators::State& state) {
+    std::optional<Money> calculate_signal_take_profit_price(const models::Signal& signal, const plugins::manifest::HostParams& host_params,
+                                                            const simulators::State& state) {
         if (!host_params.use_take_profit_.value_or(false)) {
             return std::nullopt;
         }
@@ -85,8 +84,7 @@ namespace simulators {
         return std::nullopt;
     }
 
-    models::Position PositionCalculator::calculate_position(const models::Order& order, double fillable_quantity, Money fill_price,
-                                                            const simulators::State& state) {
+    models::Position calculate_position(const models::Order& order, double fillable_quantity, Money fill_price, const simulators::State& state) {
         models::Position position = [&, state]() -> models::Position {
             const auto it = state.positions_.find(order.symbol_);
             if (it != state.positions_.end()) {
@@ -130,8 +128,7 @@ namespace simulators {
         return position;
     }
 
-    std::vector<std::pair<std::string, double>> PositionCalculator::find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill,
-                                                                                                       const simulators::State& state) {
+    std::vector<std::pair<std::string, double>> find_buy_fill_uuids_closed_by_sell(const models::Fill& sell_fill, const simulators::State& state) {
         std::vector<std::pair<std::string, double>> closed_fills;
 
         const auto pos_it = state.positions_.find(sell_fill.symbol_);
@@ -159,8 +156,7 @@ namespace simulators {
         return closed_fills;
     }
 
-    std::vector<std::pair<std::string, double>> PositionCalculator::find_sell_fill_uuids_closed_by_buy(const models::Fill& buy_fill,
-                                                                                                       const simulators::State& state) {
+    std::vector<std::pair<std::string, double>> find_sell_fill_uuids_closed_by_buy(const models::Fill& buy_fill, const simulators::State& state) {
         std::vector<std::pair<std::string, double>> closed_fills;
 
         const auto pos_it = state.positions_.find(buy_fill.symbol_);
@@ -188,4 +184,4 @@ namespace simulators {
         return closed_fills;
     }
 
-}  // namespace simulators
+}  // namespace simulators::position_calc

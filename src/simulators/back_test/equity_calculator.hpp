@@ -9,15 +9,12 @@
 
 using namespace money_utils;
 
-namespace simulators {
+namespace simulators::equity_calc {
 
-    class EquityCalculator {
-       public:
-        [[nodiscard]] static Money calculate_equity(const simulators::State& state);
-        [[nodiscard]] static double calculate_return(const plugins::manifest::HostParams& host_params, Money equity);
-        [[nodiscard]] static double calculate_max_drawdown(const simulators::State& state, Money equity);
-        [[nodiscard]] static Money calculate_available_margin(const simulators::State& state);
-    };
+    [[nodiscard]] Money calculate_equity(const simulators::State& state);
+    [[nodiscard]] double calculate_return(const plugins::manifest::HostParams& host_params, Money equity);
+    [[nodiscard]] double calculate_max_drawdown(const simulators::State& state, Money equity);
+    [[nodiscard]] Money calculate_available_margin(const simulators::State& state);
 
-}  // namespace simulators
+}  // namespace simulators::equity_calc
 #endif
